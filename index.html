@@ -3,7 +3,7 @@
    <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>ALS Inventory — Web App v1.92</title>
+      <title>ALS Inventory — Web App v1.93</title>
       <!-- Google Identity Services -->
       <script src="https://accounts.google.com/gsi/client" async defer></script>
       <!-- Html5-Qrcode library for cross‑platform barcode scanning -->
@@ -149,7 +149,7 @@
          <div class="brand">
             <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
             <div>
-               <div style="font-weight:800">ALS Inventory — Web App v1.92</div>
+               <div style="font-weight:800">ALS Inventory — Web App v1.93</div>
                <div class="small signedInWrap">
                  Signed in as: <span id="currentUser">...</span>
                  <div id="btnSignIn"></div>
@@ -162,7 +162,6 @@
             <button id="btnCreate" class="btn">Create Item</button>
             <button id="btnRestock" class="btn">ALS Bag Restock</button>
             <button id="btnRefresh" class="btn secondary">Refresh</button>
-            <button id="btnSyncStock" class="btn secondary" style="background:#4b5563;">Sync Stock</button>
          </div>
       </div>
       <div class="wrap">
@@ -281,7 +280,7 @@
 
       <script>
       /* ---------- CONFIG: set this to your Apps Script Web App URL ---------- */
-      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbxSJjkmO2Kjh_pWbC3ffq98rhNw_cxsdM6n1mEaao1_y1K0jDtKpcbtwJ0nSkoXydGqMg/exec";
+      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbz-hhEivJJv0CASJn_0MgXqGdFer3zdTMdVHPVPWQ9GZKNbRUHTKkk2fnG_lPF1ol3plg/exec";
 
       // ---------- Helper functions for date formatting and days remaining ----------
       function formatDateMMDDYYYY(dateStr) {
@@ -352,7 +351,6 @@
           btn.disabled = false;
           btn.textContent = originalText;
         };
-        // Execute callback and ensure restore after completion
         Promise.resolve(callback()).finally(restore).catch(restore);
       }
 
@@ -420,7 +418,7 @@
         const el = $('currentUser');
         if(email === null || email === undefined){
            el.textContent = 'Signed Out';
-           ['btnDashboard','btnCreate','btnRestock','btnSyncStock'].forEach(id => {
+           ['btnDashboard','btnCreate','btnRestock'].forEach(id => {
              const btn = $(id);
              if(btn) btn.disabled = true;
            });
@@ -430,7 +428,7 @@
            });
         } else {
            el.textContent = email;
-           ['btnDashboard','btnCreate','btnRestock','btnSyncStock'].forEach(id => {
+           ['btnDashboard','btnCreate','btnRestock'].forEach(id => {
              const btn = $(id);
              if(btn) btn.disabled = false;
            });
@@ -918,7 +916,7 @@
                     if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + newStatus + '" disabled />';
                     const m = document.getElementById('matches-'+idx); if(m) m.innerHTML = '';
                     maybeAddRow();
-                    loadDashboardData();
+                    refreshAll(); // refresh everything after sync
                     resolve();
                   });
                 });
@@ -989,25 +987,6 @@
           });
         });
       }
-
-      // Sync Stock button
-      $('btnSyncStock').addEventListener('click', function() {
-        const btn = this;
-        if (!confirm('This will rebuild InventoryStock from the raw Inventory log. Continue?')) return;
-        disableButton(btn, () => {
-          return new Promise((resolve) => {
-            jsonpCall('syncInventoryStock', null, function(res) {
-              if (res && res.success) {
-                alert('Sync complete. ' + (res.count || 0) + ' items updated.');
-                refreshAll();
-              } else {
-                alert('Sync failed: ' + (res.message || 'Unknown error'));
-              }
-              resolve();
-            });
-          });
-        });
-      });
 
       /* ---------- Initialization ---------- */
       window.onload = function () {
