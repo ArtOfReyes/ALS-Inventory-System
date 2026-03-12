@@ -994,12 +994,33 @@
         });
       }
 
+      /* ---------- NEW: Refresh button with sync ---------- */
+      $('btnRefresh').addEventListener('click', function() {
+        const btn = this;
+        disableButton(btn, () => {
+          return new Promise((resolve) => {
+            jsonpCall('syncInventoryStock', null, function(res) {
+              if (res && res.success) {
+                console.log('Sync complete, reloading...');
+              } else {
+                console.warn('Sync failed, reloading anyway...');
+              }
+              // Short delay to ensure sync completes, then reload
+              setTimeout(() => {
+                location.reload();
+                resolve();
+              }, 500);
+            });
+          });
+        });
+      });
+
       /* ---------- Initialization ---------- */
       window.onload = function () {
         $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
         $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
         $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
-        $('btnRefresh').addEventListener('click', ()=> { location.reload(); });
+        // btnRefresh handler already set above
         $('btnSignOut').addEventListener('click', signOutUser);
         $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
         $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
