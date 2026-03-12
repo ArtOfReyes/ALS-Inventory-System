@@ -3,9 +3,11 @@
    <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>ALS Inventory — Web App v1.9</title>
+      <title>ALS Inventory — Web App v1.91</title>
       <!-- Google Identity Services -->
       <script src="https://accounts.google.com/gsi/client" async defer></script>
+      <!-- Html5-Qrcode library for cross‑platform barcode scanning -->
+      <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
       <style>
         :root{
           --primary:#0b5fff; --on-primary:#fff; --muted:#6b7280; --card:#fff; --border:#e6e9ee; --radius:10px;
@@ -146,7 +148,7 @@
          <div class="brand">
             <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
             <div>
-               <div style="font-weight:800">ALS Inventory — Web App v1.9</div>
+               <div style="font-weight:800">ALS Inventory — Web App v1.91</div>
                <div class="small signedInWrap">
                  Signed in as: <span id="currentUser">...</span>
                  <div id="btnSignIn"></div>
@@ -277,7 +279,7 @@
 
       <script>
       /* ---------- CONFIG: set this to your Apps Script Web App URL ---------- */
-      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbyOHTTZ7G4Ss1o2czErXwEFJtFI6B0omwNCZknUKZ363t3pOTkZAe0KptnjljVev7TYYw/exec";
+      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbw2XxPUtwAriTUnYmrAGXb9gw9mTnmz7Yd-0vm-I-JBN8TCmEa3yNa8PPLY0-sVTY5mqw/exec";
 
       // ---------- Helper functions for date formatting and days remaining ----------
       function formatDateMMDDYYYY(dateStr) {
@@ -362,9 +364,11 @@
       const $ = id => document.getElementById(id);
       function esc(s){ return s==null ? "" : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
-      /* ---------- scanner state ---------- */
-      let scannerStream=null, scannerVideo=null, scannerCanvas=null, scannerCtx=null, barcodeDetector=null, scanning=false, scanRAF=null;
-      let currentTargetInput=null, currentReaderId=null;
+      /* ---------- scanner state using html5-qrcode ---------- */
+      let html5QrCode = null;
+      let currentScannerContainerId = null;
+      let currentTargetInputId = null;
+      let currentReaderId = null;
 
       /* ---------- caches ---------- */
       let dashboardData=null, requiredItems=[], bagList=[], categories=[];
@@ -526,7 +530,8 @@
           body.innerHTML = '';
           if(!results || !results.length){ body.innerHTML = '<tr><td colspan="4" class="small">No required items</td></tr>'; return; }
           results.forEach(r=>{
-            const providedQty = (r.items||[]).reduce((s,i)=> s + (Number(i.qty)||0), 0);
+            const total = (r.items||[]).reduce((s,i)=> s + (Number(i.qty)||0), 0);
+            const providedQty = Math.min(total, r.requiredQty);
             const itemsHtml = (r.items||[]).map(it => {
               const expFormatted = formatDateMMDDYYYY(it.exp);
               return '<div style="padding:4px 0">'+esc(expFormatted)+' | '+esc(it.lot||'')+'</div>';
@@ -578,14 +583,22 @@
         $('cam-'+idx).addEventListener('click', ()=> { openRowScanner(idx); });
       }
 
-      function openRowScanner(idx){ /* unchanged */ 
+      function openRowScanner(idx){
+        // if this row already has a scanner container, stop scanner and remove it
         const existing = document.getElementById('rowScannerContainer-'+idx);
-        if(existing){ stopScanner(); return; }
+        if(existing){
+          stopScanner();
+          return;
+        }
+        // remove any other row scanner containers
         const others = document.querySelectorAll('.rowScannerContainer');
         others.forEach(o => o.remove());
-        stopScanner();
+        stopScanner(); // ensure any running scanner is stopped
+
         const row = document.getElementById('row-'+idx);
         if(!row) return;
+
+        // create container for scanner
         const container = document.createElement('div');
         container.className = 'rowScannerContainer readerContainer';
         container.id = 'rowScannerContainer-'+idx;
@@ -593,14 +606,148 @@
           '<div class="scannerBox" id="rowScannerBox-'+idx+'"><div style="color:#fff">Camera preview</div></div>' +
           '<button class="closeCam" id="rowScannerClose-'+idx+'">✕</button>' +
           '<div id="rowScannerStatus-'+idx+'" class="statusMsg"></div>';
+
         row.parentNode.insertBefore(container, row.nextSibling);
+
         const closeBtn = document.getElementById('rowScannerClose-'+idx);
         if(closeBtn) closeBtn.addEventListener('click', stopScanner);
+
         setTimeout(()=> {
           try{ container.scrollIntoView({ behavior: 'smooth', block: 'center' }); }catch(e){}
         }, 80);
-        startScanner('rowScannerBox-'+idx, 'scan-'+idx, 'rowScannerContainer-'+idx, 'rowScannerStatus-'+idx, 'rowScannerClose-'+idx);
+
+        // Start scanner using html5-qrcode
+        startScannerHtml5('rowScannerBox-'+idx, 'scan-'+idx, 'rowScannerContainer-'+idx, 'rowScannerStatus-'+idx, 'rowScannerClose-'+idx);
       }
+
+      // New scanner using html5-qrcode (cross-platform)
+      async function startScannerHtml5(boxId, targetInputId, readerContainerId, statusId, closeBtnId){
+        if (html5QrCode) {
+          await html5QrCode.stop().catch(e => console.log(e));
+          html5QrCode = null;
+        }
+
+        currentTargetInput = targetInputId;
+        currentReaderId = readerContainerId;
+
+        const readerContainer = document.getElementById(readerContainerId);
+        const statusEl = statusId ? document.getElementById(statusId) : null;
+        const closeBtn = closeBtnId ? document.getElementById(closeBtnId) : null;
+
+        if(readerContainer){
+          readerContainer.style.display = 'block';
+          readerContainer.classList.add('active');
+        }
+        if(statusEl) statusEl.textContent = 'Starting camera...';
+        if(closeBtn) closeBtn.style.display = 'none';
+
+        const box = document.getElementById(boxId);
+        if(!box){
+          if(statusEl) statusEl.textContent = 'Scanner container missing';
+          return;
+        }
+
+        // Clear any previous content
+        box.innerHTML = '';
+
+        try {
+          html5QrCode = new Html5Qrcode(boxId);
+          const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+            // Handle the scanned code
+            handleDetectedCode(decodedText, targetInputId);
+            stopScanner(); // Stop after first scan
+          };
+          const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            qrCodeSuccessCallback,
+            (errorMessage) => {
+              // Ignore; scanning continues
+            }
+          );
+
+          if(statusEl) statusEl.textContent = 'Scanning — point camera at barcode';
+          if(closeBtn) closeBtn.style.display = 'inline-block';
+        } catch (err) {
+          console.error('Camera start error', err);
+          if(statusEl) statusEl.textContent = 'Camera access denied or failed.';
+          alert('Camera access denied or failed. Make sure the page is loaded over HTTPS and you allowed camera access. You can also enter barcode manually.');
+          if(readerContainer){
+            readerContainer.style.display = 'none';
+            readerContainer.classList.remove('active');
+          }
+        }
+      }
+
+      // Update create camera button to use html5-qrcode
+      $('createCameraBtn').addEventListener('click', ()=> {
+        const wrap = $('createScanner');
+        if(wrap.classList.contains('active')) {
+          stopScanner();
+          return;
+        }
+        startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
+      });
+
+      // Modify the existing startScanner to also use html5-qrcode for backward compatibility? We'll replace all calls.
+
+      // But we still have references in openRowScanner which we updated. Also handle other potential calls.
+      // We'll keep the old startScanner function as a fallback but not use it.
+
+      function stopScanner(){
+        if (html5QrCode) {
+          html5QrCode.stop().then(() => {
+            html5QrCode = null;
+          }).catch(e => console.log(e));
+        }
+
+        // Hide all scanner containers
+        if($('createScanner')){
+          $('createScanner').style.display = 'none';
+          $('createScanner').classList.remove('active');
+        }
+        if($('restockScannerContainer')){
+          $('restockScannerContainer').style.display = 'none';
+          $('restockScannerContainer').classList.remove('active');
+        }
+        if($('createCloseCam')) $('createCloseCam').style.display = 'none';
+        if($('restockCloseCam')) $('restockCloseCam').style.display = 'none';
+
+        const rowContainers = Array.from(document.querySelectorAll('.rowScannerContainer'));
+        rowContainers.forEach(rc => { try{ rc.remove(); }catch(e){} });
+
+        currentTargetInput = null;
+        currentReaderId = null;
+      }
+
+      async function handleDetectedCode(code, targetInputId){
+        if(!targetInputId) return;
+        const tgt = document.getElementById(targetInputId);
+        if(!tgt) return;
+        if(targetInputId === 'createBarcode'){ tgt.value = code; tgt.dataset.scannedBarcode = code; return; }
+        const m = targetInputId.match(/^scan-(\d+)$/);
+        if(m){
+          const idx = Number(m[1]);
+          const holder = $('matches-'+idx);
+          if(holder) holder.innerHTML = '<div class="mutedText">Searching inventory...</div>';
+          jsonpCall('getItem', { q: code, filterInvalid: true }, function(res){
+            if(holder) holder.innerHTML = '';
+            if(!res || !res.found || !res.matches || res.matches.length === 0){ showInlineAdd(idx, code, true); return; }
+            const codeNorm = (code||'').toString().trim().toLowerCase();
+            const exactMatches = res.matches.filter(mm => (mm.barcode||'').toString().trim().toLowerCase() === codeNorm);
+            if(exactMatches.length === 1){ applyMatchToRow(idx, exactMatches[0]); return; }
+            if(exactMatches.length > 1){ showMatchesList(idx, exactMatches); return; }
+            if(res.matches.length === 1){ applyMatchToRow(idx, res.matches[0]); return; }
+            showMatchesList(idx, res.matches);
+          });
+        } else {
+          tgt.value = code; tgt.dataset.scannedBarcode = code;
+        }
+      }
+
+      /* ---------- Rest of the functions (unchanged) ---------- */
 
       function rowLookup(idx){
         const input = $('scan-'+idx); if(!input) return;
@@ -820,136 +967,6 @@
         });
       }
 
-      /* ---------- INLINE SCANNER (unchanged) ---------- */
-      async function startScanner(boxId, targetInputId, readerContainerId, statusId, closeBtnId){
-        if(scanning) stopScanner();
-        currentTargetInput = targetInputId;
-        currentReaderId = readerContainerId;
-        const readerContainer = document.getElementById(readerContainerId);
-        const statusEl = statusId ? document.getElementById(statusId) : null;
-        const closeBtn = closeBtnId ? document.getElementById(closeBtnId) : null;
-        if(readerContainer){ readerContainer.style.display = 'block'; readerContainer.classList.add('active'); }
-        if(statusEl) statusEl.textContent = 'Starting camera...';
-        if(closeBtn) closeBtn.style.display='none';
-        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-          if(statusEl) statusEl.textContent = 'Camera not supported in this browser.';
-          alert('Camera not supported. Use Chrome (desktop/Android) or enter barcode manually.');
-          return;
-        }
-        const box = document.getElementById(boxId);
-        if(!box){
-          if(statusEl) statusEl.textContent = 'Scanner container missing';
-          return;
-        }
-        if(!scannerVideo){
-          scannerVideo = document.createElement('video');
-          scannerVideo.className = 'scannerVideo';
-          scannerVideo.autoplay=true; scannerVideo.playsInline=true; scannerVideo.muted=true;
-          box.innerHTML = '';
-          box.appendChild(scannerVideo);
-        } else {
-          if(scannerVideo.parentNode !== box){
-            if(scannerVideo.parentNode) scannerVideo.parentNode.removeChild(scannerVideo);
-            box.appendChild(scannerVideo);
-          }
-        }
-        if(!scannerCanvas){ scannerCanvas = document.createElement('canvas'); scannerCtx = scannerCanvas.getContext('2d'); }
-        try{
-          if('BarcodeDetector' in window){
-            try{ barcodeDetector = new BarcodeDetector({formats:['qr_code','code_128','ean_13','ean_8','upc_a','upc_e','code_39','itf','data_matrix']}); }catch(e){ barcodeDetector = new BarcodeDetector(); }
-          } else { barcodeDetector = null; }
-        }catch(e){ barcodeDetector = null; console.error(e); }
-        if(!barcodeDetector){
-          if(statusEl) statusEl.textContent = 'BarcodeDetector not available. Use Chrome or enter code manually.';
-          alert('Browser does not support native BarcodeDetector. Use Chrome or type barcode manually.');
-          return;
-        }
-        const constraints = { video: { facingMode: { exact: 'environment' } } };
-        const fallback = { video: { facingMode: 'environment' } };
-        try{
-          scannerStream = await navigator.mediaDevices.getUserMedia(constraints).catch(()=> navigator.mediaDevices.getUserMedia(fallback));
-          scannerVideo.srcObject = scannerStream;
-          await scannerVideo.play();
-          if(statusEl) statusEl.textContent = 'Scanning — point camera at barcode';
-          scanning = true;
-          if(closeBtn) closeBtn.style.display = 'inline-block';
-          scanLoop();
-        }catch(err){
-          console.error('getUserMedia error', err);
-          if(statusEl) statusEl.textContent = 'Camera access denied or failed.';
-          alert('Camera access denied or failed. Make sure the page is loaded over HTTPS and you allowed camera access.');
-          if(readerContainer){ readerContainer.style.display = 'none'; readerContainer.classList.remove('active'); }
-          stopScanner();
-        }
-      }
-      async function scanLoop(){
-        if(!scanning || !scannerVideo) return;
-        try{
-          const w = scannerVideo.videoWidth, h = scannerVideo.videoHeight;
-          if(w && h){
-            scannerCanvas.width = w; scannerCanvas.height = h;
-            scannerCtx.drawImage(scannerVideo, 0, 0, w, h);
-            const detections = await barcodeDetector.detect(scannerCanvas).catch(e=>{ console.error('detect err', e); return []; });
-            if(detections && detections.length){
-              const code = detections[0].rawValue || detections[0].value || "";
-              if(code){ await handleDetectedCode(code, currentTargetInput); stopScanner(); return; }
-            }
-          }
-        }catch(e){ console.error('scanLoop exception', e); }
-        scanRAF = requestAnimationFrame(scanLoop);
-      }
-
-      async function handleDetectedCode(code, targetInputId){
-        if(!targetInputId) return;
-        const tgt = document.getElementById(targetInputId);
-        if(!tgt) return;
-        if(targetInputId === 'createBarcode'){ tgt.value = code; tgt.dataset.scannedBarcode = code; return; }
-        const m = targetInputId.match(/^scan-(\d+)$/);
-        if(m){
-          const idx = Number(m[1]);
-          const holder = $('matches-'+idx);
-          if(holder) holder.innerHTML = '<div class="mutedText">Searching inventory...</div>';
-          jsonpCall('getItem', { q: code, filterInvalid: true }, function(res){
-            if(holder) holder.innerHTML = '';
-            if(!res || !res.found || !res.matches || res.matches.length === 0){ showInlineAdd(idx, code, true); return; }
-            const codeNorm = (code||'').toString().trim().toLowerCase();
-            const exactMatches = res.matches.filter(mm => (mm.barcode||'').toString().trim().toLowerCase() === codeNorm);
-            if(exactMatches.length === 1){ applyMatchToRow(idx, exactMatches[0]); return; }
-            if(exactMatches.length > 1){ showMatchesList(idx, exactMatches); return; }
-            if(res.matches.length === 1){ applyMatchToRow(idx, res.matches[0]); return; }
-            showMatchesList(idx, res.matches);
-          });
-        } else {
-          tgt.value = code; tgt.dataset.scannedBarcode = code;
-        }
-      }
-
-      function stopScanner(){
-        try{
-          scanning = false; currentTargetInput = null; currentReaderId = null;
-          if(scanRAF){ cancelAnimationFrame(scanRAF); scanRAF = null; }
-          if(scannerVideo){
-            try{ scannerVideo.pause(); }catch(e){}
-            if(scannerVideo.srcObject){
-              const tracks = scannerVideo.srcObject.getTracks ? scannerVideo.srcObject.getTracks() : [];
-              tracks.forEach(t => t.stop && t.stop());
-            }
-            if(scannerVideo.parentNode) scannerVideo.parentNode.removeChild(scannerVideo);
-            scannerVideo = null;
-          }
-          if(scannerStream && scannerStream.getTracks) scannerStream.getTracks().forEach(t => t.stop && t.stop());
-          scannerStream = null;
-
-          if($('createScanner')){ $('createScanner').style.display='none'; $('createScanner').classList.remove('active'); }
-          if($('restockScannerContainer')){ $('restockScannerContainer').style.display='none'; $('restockScannerContainer').classList.remove('active'); }
-          if($('createCloseCam')) $('createCloseCam').style.display='none';
-          if($('restockCloseCam')) $('restockCloseCam').style.display='none';
-
-          const rowContainers = Array.from(document.querySelectorAll('.rowScannerContainer'));
-          rowContainers.forEach(rc => { try{ rc.remove(); }catch(e){} });
-        }catch(e){ console.error('stopScanner error', e); }
-      }
-
       /* ---------- Initialization ---------- */
       window.onload = function () {
         $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
@@ -961,7 +978,7 @@
         $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
         $('hideExpired').addEventListener('change', renderDashboard);
         $('hideOutOfStock').addEventListener('change', renderDashboard);
-        $('createCameraBtn').addEventListener('click', ()=> { const wrap = $('createScanner'); if(wrap.classList.contains('active')) { stopScanner(); return; } startScanner('createScannerBox','createBarcode','createScanner','createScannerStatus','createCloseCam'); });
+        // createCameraBtn event listener already attached above
         $('createCloseCam').addEventListener('click', stopScanner);
         $('createSave').addEventListener('click', createItemClient);
         $('createClear').addEventListener('click', clearCreateForm);
@@ -1007,7 +1024,7 @@
         }
       };
 
-      window.__als_frontend = { startScanner, stopScanner, jsonpCall };
+      window.__als_frontend = { stopScanner };
       </script>
    </body>
 </html>
