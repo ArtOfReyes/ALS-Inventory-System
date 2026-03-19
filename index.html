@@ -160,6 +160,7 @@
          <div style="display:flex;gap:8px;align-items:center">
             <button id="btnDashboard" class="btn">Dashboard</button>
             <button id="btnCreate" class="btn">Create Item</button>
+            <button id="btnEquipment" class="btn">Create Equipment</button>
             <button id="btnRestock" class="btn">ALS Bag Restock</button>
             <button id="btnRefresh" class="btn secondary">Refresh</button>
          </div>
@@ -199,7 +200,7 @@
             </div>
          </div>
 
-         <!-- Create -->
+         <!-- Create Item -->
          <div id="createCard" class="card" style="display:none">
             <h3>Create Inventory Item</h3>
             <div class="instruction">
@@ -233,7 +234,49 @@
             </div>
             <div style="margin-top:12px"> <button id="createSave" class="btn">Save item</button> <button id="createClear" class="btn secondary">Clear</button> </div>
          </div>
-
+         
+         <!-- Create Equipment -->
+         <div id="equipmentCard" class="card" style="display:none">
+           <h3>Create Equipment</h3>
+           <div class="instruction">
+             <p><strong>How to add equipment:</strong> Enter the barcode, choose the equipment type, then fill in the serial number, make, and model. Click <strong>Save equipment</strong> to store it in <strong>EquipmentStock</strong>.</p>
+           </div>
+         
+           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+             <div>
+               <label>Barcode</label>
+               <input id="equipmentBarcode" placeholder="Barcode" />
+             </div>
+         
+             <div>
+               <label>Equipment Type</label>
+               <select id="equipmentType">
+                 <option value="">-- select type --</option>
+               </select>
+             </div>
+         
+             <div>
+               <label>Serial Number</label>
+               <input id="equipmentSerial" placeholder="Serial number" />
+             </div>
+         
+             <div>
+               <label>Make</label>
+               <input id="equipmentMake" placeholder="Make" />
+             </div>
+         
+             <div>
+               <label>Model</label>
+               <input id="equipmentModel" placeholder="Model" />
+             </div>
+           </div>
+         
+           <div style="margin-top:12px">
+             <button id="equipmentSave" class="btn">Save equipment</button>
+             <button id="equipmentClear" class="btn secondary">Clear</button>
+           </div>
+         </div>
+         
          <!-- Restock -->
          <div id="bagCard" class="card" style="display:none">
             <div style="display:flex;justify-content:space-between;align-items:center">
@@ -384,7 +427,7 @@
       let currentReaderId = null;
 
       /* ---------- caches ---------- */
-      let dashboardData=null, requiredItems=[], bagList=[], categories=[];
+      let dashboardData=null, requiredItems=[], bagList=[], categories=[], equipmentTypes=[];
 
       /* ---------- Google Sign-In ---------- */
       function handleSignIn(response) {
@@ -418,17 +461,17 @@
         const el = $('currentUser');
         if(email === null || email === undefined){
            el.textContent = 'Signed Out';
-           ['btnDashboard','btnCreate','btnRestock'].forEach(id => {
+           ['btnDashboard','btnCreate','btnEquipment','btnRestock'].forEach(id => {
              const btn = $(id);
              if(btn) btn.disabled = true;
            });
-           ['dashboardCard','createCard','bagCard'].forEach(id => {
+           ['dashboardCard','createCard','equipmentCard','bagCard'].forEach(id => {
              const card = $(id);
              if(card) card.style.display = 'none';
            });
         } else {
            el.textContent = email;
-           ['btnDashboard','btnCreate','btnRestock'].forEach(id => {
+           ['btnDashboard','btnCreate','btnEquipment','btnRestock'].forEach(id => {
              const btn = $(id);
              if(btn) btn.disabled = false;
            });
@@ -438,7 +481,10 @@
       /* ---------- UI helpers ---------- */
       function showCard(id){
         if (!currentUser) return;
-        ['dashboardCard','createCard','bagCard'].forEach(c=> $(c).style.display = (c===id)?'block':'none');
+        ['dashboardCard','createCard','equipmentCard','bagCard'].forEach(c=> {
+           const el = $(c);
+           if (el) el.style.display = (c===id)?'block':'none';
+        });
         stopScanner();
       }
       function refreshAll(){
@@ -447,6 +493,7 @@
         loadRequiredItems();
         loadBagList();
         loadCategories();
+        loadEquipmentTypes();
         initRestockRows();
       }
 
@@ -455,6 +502,7 @@
       function loadRequiredItems(){ jsonpCall('getRequiredItems', null, function(resp){ requiredItems = resp || []; populateReqDatalist(); }); }
       function loadBagList(){ jsonpCall('getBagList', null, function(resp){ bagList = resp || []; populateBagSelects(); }); }
       function loadCategories(){ jsonpCall('getCategories', null, function(resp){ categories = resp || []; populateCategories(); }); }
+      function loadEquipmentTypes(){ jsonpCall('getEquipmentTypes', null, function(resp){ equipmentTypes = resp || []; populateEquipmentTypes(); }); }
 
       /* ---------- populate UI with bag selection persistence ---------- */
       function populateBagSelects(){
@@ -532,6 +580,23 @@
         });
       }
 
+      function populateEquipmentTypes(){
+        const sel = $('equipmentType');
+        if(!sel) return;
+      
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">-- select type --</option>';
+      
+        (equipmentTypes || []).forEach(t => {
+          const o = document.createElement('option');
+          o.value = t;
+          o.textContent = t;
+          sel.appendChild(o);
+        });
+      
+        if (currentVal) sel.value = currentVal;
+      }
+
       /* ---------- Dashboard renderers (preserve view on filter toggle) ---------- */
       function onDashboardViewToggle(){
         const v=$('dashboardViewSelect').value;
@@ -604,6 +669,40 @@
               refreshAll();
               setTimeout(()=> { alert('Saved: ' + (res.message || 'OK')); resolve(); }, 450);
               clearCreateForm();
+            });
+          });
+        });
+      }
+
+      /* ---------- Create equipment ---------- */
+      function clearEquipmentForm(){ $('equipmentBarcode').value = ''; $('equipmentType').value = ''; $('equipmentSerial').value = ''; $('equipmentMake').value = ''; $('equipmentModel').value = ''; }
+      function createEquipmentClient(){
+        const btn = $('equipmentSave');
+        disableButton(btn, () => {
+          return new Promise((resolve) => {
+            const payload = { barcode: ($('equipmentBarcode').value || '').trim(), equipmentType: ($('equipmentType').value || '').trim(), serialNumber: ($('equipmentSerial').value || '').trim(), make: ($('equipmentMake').value || '').trim(), model: ($('equipmentModel').value || '').trim() };
+      
+            if(!payload.barcode){
+              alert('Barcode is required');
+              resolve();
+              return;
+            }
+            if(!payload.equipmentType){
+              alert('Equipment Type is required');
+              resolve();
+              return;
+            }
+      
+            jsonpCall('createEquipment', payload, function(res){
+              if(!res || res.success===false){
+                alert((res && res.message) ? res.message : 'Create equipment failed');
+                resolve();
+                return;
+              }
+      
+              alert(res.message || 'Equipment saved');
+              clearEquipmentForm();
+              resolve();
             });
           });
         });
@@ -1063,12 +1162,15 @@
       window.onload = function () {
         $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
         $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
+        $('btnEquipment').addEventListener('click', ()=> showCard('equipmentCard'));
         $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
         $('btnSignOut').addEventListener('click', signOutUser);
         $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
         $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
         $('hideExpired').addEventListener('change', renderDashboard);
         $('hideOutOfStock').addEventListener('change', renderDashboard);
+        $('equipmentSave').addEventListener('click', createEquipmentClient);
+        $('equipmentClear').addEventListener('click', clearEquipmentForm);
         $('createCloseCam').addEventListener('click', stopScanner);
         $('createSave').addEventListener('click', createItemClient);
         $('createClear').addEventListener('click', clearCreateForm);
