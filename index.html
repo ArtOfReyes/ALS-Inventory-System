@@ -3,7 +3,7 @@
    <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>ALS Inventory — Web App v1.94</title>
+      <title>ALS Inventory — Web App v1.94a</title>
       <!-- Google Identity Services -->
       <script src="https://accounts.google.com/gsi/client" async defer></script>
       <!-- Html5-Qrcode library for cross‑platform barcode scanning -->
@@ -149,7 +149,7 @@
          <div class="brand">
             <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
             <div>
-               <div style="font-weight:800">ALS Inventory — Web App v1.94</div>
+               <div style="font-weight:800">ALS Inventory — Web App v1.94a</div>
                <div class="small signedInWrap">
                  Signed in as: <span id="currentUser">...</span>
                  <div id="btnSignIn"></div>
@@ -280,7 +280,7 @@
 
       <script>
       /* ---------- CONFIG: set this to your Apps Script Web App URL ---------- */
-      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbwAvpvsm9Qt-juLvUQLqJSnvaSaYH5YgZX8TMAUCIiJl9bKgr_ysbb9-B-FmCrCXnlPxg/exec";
+      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbyJjmObi3LKcJH4b2Yth5QWiUCUEaKAYqEusEgYeGOtr97pZiSHmpcEhhFhZXf7wKfM/exec";
 
       // ---------- Helper functions for date formatting and days remaining ----------
       function formatDateMMDDYYYY(dateStr) {
@@ -818,7 +818,8 @@
           if(match.barcode) scanInp.dataset.barcode = match.barcode;
           if(typeof match.remaining !== 'undefined') scanInp.dataset.remaining = String(match.remaining);
           delete scanInp.dataset.scannedBarcode;
-        }
+          delete scanInp.dataset.replaceTarget;
+         }
         const matchesHolder = $('matches-'+idx);
         if(matchesHolder) matchesHolder.innerHTML = '';
         maybeAddRow();
@@ -865,8 +866,14 @@
               const itemName = parenIndex > -1 ? fullText.substring(0, parenIndex) : fullText;
               const catMatch = fullText.match(/\((.*)\)$/);
               const cat = catMatch ? catMatch[1] : '';
+            
               if (itemName && $('nameinp-'+idx)) $('nameinp-'+idx).value = itemName;
               if (cat && $('catinp-'+idx)) $('catinp-'+idx).value = cat;
+            
+              const scanField = $('scan-'+idx);
+              if (scanField) {
+                scanField.dataset.replaceTarget = this.value || '';
+              }
             });
           }
 
@@ -884,6 +891,10 @@
               const newLot = (document.getElementById('lotinp-'+idx) && document.getElementById('lotinp-'+idx).value || '').trim();
               const newExp = (document.getElementById('expinp-'+idx) && document.getElementById('expinp-'+idx).value || '').trim();
               const replaceTarget = (document.getElementById('replaceReq-'+idx) && document.getElementById('replaceReq-'+idx).value || '').trim();
+              const scanField = document.getElementById('scan-'+idx);
+                if (scanField) {
+                  scanField.dataset.replaceTarget = replaceTarget;
+                }
               const categoryChosen = (document.getElementById('catinp-'+idx) && document.getElementById('catinp-'+idx).value || '').trim();
               const invQtyVal = Number(document.getElementById('invqty-'+idx).value || 1);
               const bagQtyVal = Number(document.getElementById('bagqty-'+idx).value || 1);
@@ -1033,6 +1044,8 @@
         $('resetRows').addEventListener('click', initRestockRows);
         $('submitAll').addEventListener('click', submitAll);
 
+        jsonpCall('ensureBagInventoryLog', null, function(){});
+         
         function initGoogle() {
           if (window.google && google.accounts && google.accounts.id) {
             try {
