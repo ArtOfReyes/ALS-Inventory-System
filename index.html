@@ -6,7 +6,7 @@
       <title>ALS Inventory — Web App v1.94a</title>
       <!-- Google Identity Services -->
       <script src="https://accounts.google.com/gsi/client" async defer></script>
-      <!-- Html5-Qrcode library for cross‑platform barcode scanning -->
+      <!-- Html5-Qrcode library for cross-platform barcode scanning -->
       <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
       <style>
         :root{
@@ -244,7 +244,7 @@
                <p><strong>Instructions:</strong>
                <br>• <strong>First, select a bag number</strong> from the dropdown above the table.
                <br>• Scan or type a barcode/lot number/item name in the first column.
-               <br>• If the item exists, all fields will auto‑fill. Enter the <strong>Bag Qty</strong> (how many you are placing into the bag).
+               <br>• If the item exists, all fields will auto-fill. Enter the <strong>Bag Qty</strong> (how many you are placing into the bag).
                <br>• If the item is <strong>not found</strong>, fill in the Lot, Expiration, Inv Qty (enter the total quantity you are adding to stock), choose which required item it replaces, then click <strong>Add & Use</strong>. The item is then saved to the inventory, the Inv Qty field becomes disabled (so you can see what was added), and the status updates to reflect the item's expiration (OK / Expiring Soon / Expired). You can then adjust the <strong>Bag Qty</strong> before you submit everything.
                <br>• Once all rows are ready, click <strong>Submit All</strong> to record the bag contents.</p>
             </div>
@@ -442,6 +442,7 @@
         stopScanner();
       }
       function refreshAll(){
+        jsonpCall('ensureBagInventoryLog', null, function(){});
         loadDashboardData();
         loadRequiredItems();
         loadBagList();
@@ -498,11 +499,45 @@
         if (currentVal) sel.value = currentVal;
       }
 
-      function populateReqDatalist(filterCategory){ const dl = $('reqList'); if(!dl) return; dl.innerHTML = ''; const items = (requiredItems||[]).filter(it => (!filterCategory || filterCategory === '' || it.category === filterCategory)); items.forEach(it=>{ const o = document.createElement('option'); o.value=it.name; dl.appendChild(o); }); $('createItemName').addEventListener('input', function(){ const v=(this.value||'').trim().toLowerCase(); const found = (requiredItems||[]).find(r => (r.name||'').toLowerCase() === v); if(found) $('createCategory').value = found.category || ''; }); }
-      function populateCategories(){ const sel=$('createCategory'); if(!sel) return; sel.innerHTML = '<option value="">-- none --</option>'; (categories||[]).forEach(c=> { const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); }); }
+      function populateReqDatalist(filterCategory){
+        const dl = $('reqList');
+        if(!dl) return;
+        dl.innerHTML = '';
+        const items = (requiredItems||[]).filter(it => (!filterCategory || filterCategory === '' || it.category === filterCategory));
+        items.forEach(it=>{
+          const o = document.createElement('option');
+          o.value=it.name;
+          dl.appendChild(o);
+        });
+        const input = $('createItemName');
+        if (input && !input.dataset.boundReqCategory) {
+          input.dataset.boundReqCategory = "1";
+          input.addEventListener('input', function(){
+            const v=(this.value||'').trim().toLowerCase();
+            const found = (requiredItems||[]).find(r => (r.name||'').toLowerCase() === v);
+            if(found) $('createCategory').value = found.category || '';
+          });
+        }
+      }
+
+      function populateCategories(){
+        const sel=$('createCategory');
+        if(!sel) return;
+        sel.innerHTML = '<option value="">-- none --</option>';
+        (categories||[]).forEach(c=> {
+          const o=document.createElement('option');
+          o.value=c;
+          o.textContent=c;
+          sel.appendChild(o);
+        });
+      }
 
       /* ---------- Dashboard renderers (preserve view on filter toggle) ---------- */
-      function onDashboardViewToggle(){ const v=$('dashboardViewSelect').value; $('bagSelectorWrap').style.display = v==='bags' ? 'block' : 'none'; renderDashboard(); }
+      function onDashboardViewToggle(){
+        const v=$('dashboardViewSelect').value;
+        $('bagSelectorWrap').style.display = v==='bags' ? 'block' : 'none';
+        renderDashboard();
+      }
       function renderDashboard(){ 
         const view = $('dashboardViewSelect').value||'items'; 
         if(view==='items') renderDashboardItems(); 
@@ -819,7 +854,7 @@
           if(typeof match.remaining !== 'undefined') scanInp.dataset.remaining = String(match.remaining);
           delete scanInp.dataset.scannedBarcode;
           delete scanInp.dataset.replaceTarget;
-         }
+        }
         const matchesHolder = $('matches-'+idx);
         if(matchesHolder) matchesHolder.innerHTML = '';
         maybeAddRow();
@@ -848,7 +883,6 @@
 
         const statusCell = $('status-'+idx);
         if(statusCell){
-          // Create the Add & Use UI
           statusCell.innerHTML = '<div style="margin-top:6px"><label class="small">Replacing which required item?</label><select id="replaceReq-'+idx+'"><option value="">(select)</option></select></div><div style="margin-top:8px"><button id="addUse-'+idx+'" class="btn small">Add & Use</button></div>';
           const replaceSel = $('replaceReq-'+idx);
           if(replaceSel){
@@ -866,10 +900,9 @@
               const itemName = parenIndex > -1 ? fullText.substring(0, parenIndex) : fullText;
               const catMatch = fullText.match(/\((.*)\)$/);
               const cat = catMatch ? catMatch[1] : '';
-            
               if (itemName && $('nameinp-'+idx)) $('nameinp-'+idx).value = itemName;
               if (cat && $('catinp-'+idx)) $('catinp-'+idx).value = cat;
-            
+
               const scanField = $('scan-'+idx);
               if (scanField) {
                 scanField.dataset.replaceTarget = this.value || '';
@@ -877,12 +910,10 @@
             });
           }
 
-          // Attach click handler directly to the Add & Use button with {once:true} to ensure single execution
           const addUseBtn = document.getElementById('addUse-'+idx);
           if (addUseBtn) {
             addUseBtn.addEventListener('click', function onClick(ev) {
               ev.preventDefault();
-              // Disable the button to prevent further clicks (even though once removes it, this adds visual feedback)
               addUseBtn.disabled = true;
               const originalText = addUseBtn.textContent;
               addUseBtn.textContent = '...';
@@ -891,17 +922,21 @@
               const newLot = (document.getElementById('lotinp-'+idx) && document.getElementById('lotinp-'+idx).value || '').trim();
               const newExp = (document.getElementById('expinp-'+idx) && document.getElementById('expinp-'+idx).value || '').trim();
               const replaceTarget = (document.getElementById('replaceReq-'+idx) && document.getElementById('replaceReq-'+idx).value || '').trim();
-              const scanField = document.getElementById('scan-'+idx);
-                if (scanField) {
-                  scanField.dataset.replaceTarget = replaceTarget;
-                }
               const categoryChosen = (document.getElementById('catinp-'+idx) && document.getElementById('catinp-'+idx).value || '').trim();
               const invQtyVal = Number(document.getElementById('invqty-'+idx).value || 1);
               const bagQtyVal = Number(document.getElementById('bagqty-'+idx).value || 1);
+
+              const scanField = document.getElementById('scan-'+idx);
+              if (scanField) {
+                scanField.dataset.replaceTarget = replaceTarget;
+              }
+
               if(!newName){ alert('Item name required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
               if(!replaceTarget){ alert('Choose required item replaced'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+
               const barcodeToSend = document.getElementById('scan-'+idx).dataset.scannedBarcode || '';
               const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
+
               jsonpCall('createItem', payload, function(res){
                 if(!res || res.success===false){
                   alert((res && res.message) ? res.message : 'Create failed');
@@ -916,6 +951,7 @@
                   inp.dataset.lot = newLot;
                   inp.dataset.exp = res.exp || newExp || '';
                   if(payload.barcode) inp.dataset.barcode = payload.barcode;
+                  inp.dataset.replaceTarget = replaceTarget;
                 }
                 const finalExp = res.exp || newExp;
                 const newStatus = computeStatusFromExp(finalExp);
@@ -930,16 +966,14 @@
                 const catField = document.getElementById('catinp-'+idx);
                 if(catField) catField.disabled = true;
 
-                // Replace the status cell with a disabled input showing the new status
                 const statusCellNow = document.getElementById('status-'+idx);
                 if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + newStatus + '" disabled />';
 
                 const m = document.getElementById('matches-'+idx); if(m) m.innerHTML = '';
                 maybeAddRow();
-                // Refresh only dashboard data, not the restock table
                 loadDashboardData();
               });
-            }, { once: true }); // ensures the listener is removed after first click
+            }, { once: true });
           }
         }
       }
@@ -1016,7 +1050,6 @@
               } else {
                 console.warn('Sync failed, reloading anyway...');
               }
-              // Short delay to ensure sync completes, then reload
               setTimeout(() => {
                 location.reload();
                 resolve();
@@ -1031,7 +1064,6 @@
         $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
         $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
         $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
-        // btnRefresh handler already set above
         $('btnSignOut').addEventListener('click', signOutUser);
         $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
         $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
@@ -1044,8 +1076,6 @@
         $('resetRows').addEventListener('click', initRestockRows);
         $('submitAll').addEventListener('click', submitAll);
 
-        jsonpCall('ensureBagInventoryLog', null, function(){});
-         
         function initGoogle() {
           if (window.google && google.accounts && google.accounts.id) {
             try {
