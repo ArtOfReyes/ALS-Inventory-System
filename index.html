@@ -175,6 +175,7 @@
                      View:
                      <select id="dashboardViewSelect">
                         <option value="items">Items</option>
+                        <option value="equipment">Equipment</option>
                         <option value="bags">Bags (select one)</option>
                      </select>
                   </label>
@@ -239,13 +240,23 @@
          <div id="equipmentCard" class="card" style="display:none">
            <h3>Create Equipment</h3>
            <div class="instruction">
-             <p><strong>How to add equipment:</strong> Enter the barcode, choose the equipment type, then fill in the serial number, make, and model. Click <strong>Save equipment</strong> to store it in <strong>EquipmentStock</strong>.</p>
+             <p><strong>How to add equipment:</strong> Scan or type a barcode if available, choose the equipment type, then fill in serial number, make, and model. Click <strong>Save equipment</strong> to store it in <strong>EquipmentStock</strong>.</p>
            </div>
          
            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
              <div>
                <label>Barcode</label>
-               <input id="equipmentBarcode" placeholder="Barcode" />
+               <div style="display:flex;gap:8px">
+                 <input id="equipmentBarcode" placeholder="Scan or type barcode" />
+                 <button id="equipmentCameraBtn" class="cameraBtn">📷</button>
+               </div>
+               <div id="equipmentScanner" class="readerContainer">
+                 <div class="scannerBox" id="equipmentScannerBox">
+                   <div style="color:#fff">Camera preview</div>
+                 </div>
+                 <button class="closeCam" id="equipmentCloseCam" style="display:none">✕</button>
+                 <div id="equipmentScannerStatus" class="statusMsg"></div>
+               </div>
              </div>
          
              <div>
@@ -606,8 +617,9 @@
       function renderDashboard(){ 
         const view = $('dashboardViewSelect').value||'items'; 
         if(view==='items') renderDashboardItems(); 
-        else renderDashboardBags(); 
-      }
+        else if(view === 'equipment') renderDashboardEquipment();
+           else renderDashboardBags(); 
+         }
       function renderDashboardItems(){
         const body=$('dashboardBody'), head=$('dashboardHead').querySelector('tr');
         head.innerHTML = '<th>Item Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Remaining</th><th>Category</th><th>Status</th>';
@@ -630,6 +642,38 @@
           const expFormatted = formatDateMMDDYYYY(r.expirationDate);
           const tr=document.createElement('tr');
           tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(expFormatted)+'</td><td>'+esc(r.remaining)+'</td><td>'+esc(r.category)+'</td><td>'+esc(status)+'</td>';
+          body.appendChild(tr);
+        });
+      }
+      function renderDashboardEquipment(){
+        const body = $('dashboardBody');
+        const head = $('dashboardHead').querySelector('tr');
+      
+        head.innerHTML = '<th>Barcode</th><th>Equipment Type</th><th>Serial Number</th><th>Make</th><th>Model</th>';
+        body.innerHTML = '<tr><td colspan="5" class="small">No equipment</td></tr>';
+      
+        if(!dashboardData || !dashboardData.equipment) return;
+      
+        const rows = dashboardData.equipment.slice();
+        rows.sort((a,b)=> {
+          return (a.equipmentType || '').localeCompare(b.equipmentType || '') ||
+                 (a.barcode || '').localeCompare(b.barcode || '');
+        });
+      
+        if(rows.length === 0){
+          body.innerHTML = '<tr><td colspan="5" class="small">No equipment</td></tr>';
+          return;
+        }
+      
+        body.innerHTML = '';
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + esc(r.barcode) + '</td>' +
+            '<td>' + esc(r.equipmentType) + '</td>' +
+            '<td>' + esc(r.serialNumber) + '</td>' +
+            '<td>' + esc(r.make) + '</td>' +
+            '<td>' + esc(r.model) + '</td>';
           body.appendChild(tr);
         });
       }
@@ -675,18 +719,27 @@
       }
 
       /* ---------- Create equipment ---------- */
-      function clearEquipmentForm(){ $('equipmentBarcode').value = ''; $('equipmentType').value = ''; $('equipmentSerial').value = ''; $('equipmentMake').value = ''; $('equipmentModel').value = ''; }
+      function clearEquipmentForm(){
+        $('equipmentBarcode').value = '';
+        $('equipmentType').value = '';
+        $('equipmentSerial').value = '';
+        $('equipmentMake').value = '';
+        $('equipmentModel').value = '';
+        if ($('equipmentScannerStatus')) $('equipmentScannerStatus').textContent = '';
+      }
+      
       function createEquipmentClient(){
         const btn = $('equipmentSave');
         disableButton(btn, () => {
           return new Promise((resolve) => {
-            const payload = { barcode: ($('equipmentBarcode').value || '').trim(), equipmentType: ($('equipmentType').value || '').trim(), serialNumber: ($('equipmentSerial').value || '').trim(), make: ($('equipmentMake').value || '').trim(), model: ($('equipmentModel').value || '').trim() };
+            const payload = {
+              barcode: ($('equipmentBarcode').value || '').trim(),   // optional
+              equipmentType: ($('equipmentType').value || '').trim(),
+              serialNumber: ($('equipmentSerial').value || '').trim(),
+              make: ($('equipmentMake').value || '').trim(),
+              model: ($('equipmentModel').value || '').trim()
+            };
       
-            if(!payload.barcode){
-              alert('Barcode is required');
-              resolve();
-              return;
-            }
             if(!payload.equipmentType){
               alert('Equipment Type is required');
               resolve();
@@ -702,6 +755,7 @@
       
               alert(res.message || 'Equipment saved');
               clearEquipmentForm();
+              refreshAll();
               resolve();
             });
           });
@@ -842,6 +896,15 @@
         startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
       });
 
+      $('equipmentCameraBtn').addEventListener('click', ()=> {
+        const wrap = $('equipmentScanner');
+        if(wrap.classList.contains('active')) {
+          stopScanner();
+          return;
+        }
+        startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam');
+      });
+
       function stopScanner(){
         if (html5QrCode) {
           html5QrCode.stop().then(() => {
@@ -853,11 +916,16 @@
           $('createScanner').style.display = 'none';
           $('createScanner').classList.remove('active');
         }
+        if($('equipmentScanner')){
+          $('equipmentScanner').style.display = 'none';
+          $('equipmentScanner').classList.remove('active');
+         }
         if($('restockScannerContainer')){
           $('restockScannerContainer').style.display = 'none';
           $('restockScannerContainer').classList.remove('active');
         }
         if($('createCloseCam')) $('createCloseCam').style.display = 'none';
+        if($('equipmentCloseCam')) $('equipmentCloseCam').style.display = 'none';
         if($('restockCloseCam')) $('restockCloseCam').style.display = 'none';
 
         const rowContainers = Array.from(document.querySelectorAll('.rowScannerContainer'));
@@ -872,6 +940,7 @@
         const tgt = document.getElementById(targetInputId);
         if(!tgt) return;
         if(targetInputId === 'createBarcode'){ tgt.value = code; tgt.dataset.scannedBarcode = code; return; }
+        if(targetInputId === 'equipmentBarcode'){ tgt.value = code; tgt.dataset.scannedBarcode = code; return; }
         const m = targetInputId.match(/^scan-(\d+)$/);
         if(m){
           const idx = Number(m[1]);
@@ -1171,6 +1240,7 @@
         $('hideOutOfStock').addEventListener('change', renderDashboard);
         $('equipmentSave').addEventListener('click', createEquipmentClient);
         $('equipmentClear').addEventListener('click', clearEquipmentForm);
+        $('equipmentCloseCam').addEventListener('click', stopScanner);
         $('createCloseCam').addEventListener('click', stopScanner);
         $('createSave').addEventListener('click', createItemClient);
         $('createClear').addEventListener('click', clearCreateForm);
