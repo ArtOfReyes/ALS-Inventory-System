@@ -3,7 +3,7 @@
    <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>ALS Inventory — Web App v1.96b renewed</title>
+      <title>ALS Inventory — Web App v1.96c renewed</title>
       <script src="https://accounts.google.com/gsi/client" async defer></script>
       <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
       <style>
@@ -125,7 +125,7 @@
          <div class="brand">
             <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
             <div>
-               <div style="font-weight:800">ALS Inventory — Web App v1.96b renewed</div>
+               <div style="font-weight:800">ALS Inventory — Web App v1.96c renewed</div>
                <div class="small signedInWrap">
                  Signed in as: <span id="currentUser">...</span>
                  <div id="btnSignIn"></div>
@@ -136,8 +136,9 @@
          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <button id="btnDashboard" class="btn">Dashboard</button>
             <button id="btnCreate" class="btn">Create Item</button>
-            <button id="btnEquipment" class="btn">Equipment Inventory</button>
             <button id="btnRestock" class="btn">ALS Bag Restock</button>
+            <button id="btnEquipment" class="btn">Equipment Inventory</button>
+            <button id="btnNarcotics" class="btn">Narcotics</button>
             <button id="btnRefresh" class="btn secondary">Refresh</button>
          </div>
       </div>
@@ -153,6 +154,8 @@
                         <option value="items">Items</option>
                         <option value="bags">Bags (select one)</option>
                         <option value="equipment">Equipment</option>
+                        <option value="narcs">Narcs</option>
+                        <option value="kits">Kits (select one)</option>
                      </select>
                   </label>
                </div>
@@ -164,6 +167,10 @@
             <div id="bagSelectorWrap" style="margin-top:8px;display:none">
               <label>Select Bag</label>
               <select id="dashboardBagSelect"></select>
+            </div>
+            <div id="narcSelectorWrap" style="margin-top:8px;display:none">
+              <label>Select Narc Kit</label>
+              <select id="dashboardNarcKitSelect"></select>
             </div>
             <div class="tableWrap" style="margin-top:12px">
                <table>
@@ -299,6 +306,90 @@
             </div>
          </div>
 
+         <div id="narcoticsCard" class="card" style="display:none">
+            <h3>Narcotics</h3>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+               <div>
+                  <label>Mode</label>
+                  <select id="narcMode">
+                     <option value="create">Create Narc</option>
+                     <option value="kits">Narc Kit Restock</option>
+                  </select>
+               </div>
+
+               <div>
+                  <label>Location</label>
+                  <select id="narcLocation">
+                     <option value="Bronxcare">Bronxcare</option>
+                     <option value="Citywide">Citywide</option>
+                  </select>
+               </div>
+            </div>
+
+            <div id="createNarcPanel" style="margin-top:14px">
+               <table>
+                  <thread>
+                     <tr>
+                        <th>Narc Name</th>
+                        <th>Barcode</th>
+                        <th>Lot Number</th>
+                        <th>Expiration</th>
+                        <th>Quantity (Vials)</th>
+                     </tr>
+                  </thread>
+                  <tbody>
+                  <tr>
+                     <td><select id="narcName"></select></td>
+                     <td>
+                        <div style="display:flex;gap:8px;align-items:center">
+                           <input id="narcBarcode" />
+                           <buton id="narcCameraBtn" class="cameraBtn">📷</buton>
+                        </div>
+                     </td>
+                     <td><input id="narcLot"></td>
+                     <td><input id="narcExp" type="date"></td>
+                     <td><input id="narcQty" type="number" min="0"></td>
+                     </tr>
+                  </tbody>
+               </table>
+
+               <div style="margin-top:12px">
+                  <button id="saveNarcBtn" class="btn">Save Narc</button>
+                  <button id="clearNarcBtn" class="btn secondary">Clear</button>
+               </div>
+            </div>
+
+            <div id="narcKitPanel" style="display:none;margin-top:14px">
+               <div style="margin-bottom:10px">
+                  <label>Narc Kit ID</label>
+                  <select> id="narcKitSelect"></select>
+               </div>
+
+               <div class="tableWrap">
+                  <table>
+                     <thread>
+                        <tr>
+                           <th>Scan / Lot # / Name</th>
+                           <th>Narc Name</th>
+                           <th>Lot</th>
+                           <th>Expiration</th>
+                           <th>Inv Qty</th>
+                           <th>Kit Qty</th>
+                           <th>Status</th>
+                        </tr>
+                     </thread>
+                     <tbody id="narcKitBody"></tbody>
+                  </table>
+               </div>
+
+               <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
+                  <button id="narcKitResetRows" class="btn secondary">Reset rows</button>
+                  <button id="narcKitSubmitAll" class="btn">Submit All</button>
+               </div>
+            </div>
+         </div>
+
          <div id="bagCard" class="card" style="display:none">
             <div style="display:flex;justify-content:space-between;align-items:center">
                <h3 style="margin:0">ALS Bag Restock</h3>
@@ -317,8 +408,6 @@
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
               <label>Bag</label>
               <select id="bagSelect"></select>
-              <button id="resetRows" class="btn secondary">Reset rows</button>
-              <button id="submitAll" class="btn">Submit All</button>
             </div>
             <div class="tableWrap">
                <table>
@@ -337,11 +426,15 @@
                   <tbody id="restockBody"></tbody>
                </table>
             </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top12px;flex-wrap:wrap">
+               <button id="resetRows" class="btn secondary">Reset rows</button>
+              <button id="submitAll" class="btn">Submit All</button>
+            </div>
          </div>
       </div>
 
       <script>
-      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbyG6b6f0zyCzQ-X0EgbtDbjvURimFsYnqaFJMZ2n52_VfMNI4Y-40VwjI4CTyZMaUGCSw/exec";
+      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbwaob7pHXoO8nOUFeDtWaMXxWyNK604B6NNuST719_Td-8xDsRe5PcdVJjyDjxFNhH-jg/exec";
 
       const $ = id => document.getElementById(id);
       function esc(s){ return s==null ? "" : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
@@ -388,7 +481,7 @@
       let currentUser = null;
       let selectedBag = '';
       let html5QrCode = null;
-      let dashboardData=null, requiredItems=[], bagList=[], categories=[], equipmentLookups={ types:[], locations:[], statuses:[], serviceReasons:[] };
+      let dashboardData=null, requiredItems=[], bagList=[], categories=[], equipmentLookups={ types:[], locations:[], statuses:[], serviceReasons:[] }, narcLookups={ narcNames:[], narcKits:[] };
 
       function jsonpCall(action, data, cb){
         if (googleToken && action !== 'verifyToken') {
@@ -417,7 +510,7 @@
       }
 
       function showCard(id){
-        ['dashboardCard','createCard','bagCard','equipmentCard'].forEach(c => {
+        ['dashboardCard','createCard','bagCard','equipmentCard','narcoticsCard'].forEach(c => {
           const el = $(c);
           if(el) el.style.display = (c===id) ? 'block' : 'none';
         });
@@ -467,7 +560,283 @@
         jsonpCall('getBagList', null, function(resp){ bagList = resp || []; populateBagSelects(); });
         jsonpCall('getCategories', null, function(resp){ categories = resp || []; populateCategories(); });
         jsonpCall('getEquipmentLookups', null, function(resp){ equipmentLookups = resp || { types:[], locations:[], statuses:[], serviceReasons:[] }; populateEquipmentLookups(); });
+        loadNarcLookups();
+        populateDashboardNarcKitSelect();
         initRestockRows();
+      }
+
+      function loadNarcLookups(){
+        const loc = $('narcLocation') ? $('narcLocation').value : 'Bronxcare';
+        jsonpCall('getNarcLookups', { location: loc }, function(resp){
+          narcLookups = resp || { narcNames: [], narcKits: [] };
+          populateNarcNameList();
+          populateNarcKitSelect();
+        });
+      }
+      
+      function populateNarcNameList(){
+        const sel = $('narcName');
+        if(!sel) return;
+        sel.innerHTML = '<option value="">-- select --</option>';
+        (narcLookups.narcNames || []).forEach(n => {
+          const o = document.createElement('option');
+          o.value = n;
+          o.textContent = n;
+          sel.appendChild(o);
+        });
+      }
+      
+      function populateNarcKitSelect(){
+        const sel = $('narcKitSelect');
+        if(!sel) return;
+        sel.innerHTML = '<option value="">-- select --</option>';
+        (narcLookups.narcKits || []).forEach(k => {
+          const o = document.createElement('option');
+          o.value = k;
+          o.textContent = k;
+          sel.appendChild(o);
+        });
+      }
+      
+      function toggleNarcMode(){
+        const mode = $('narcMode').value;
+        $('createNarcPanel').style.display = mode === 'create' ? 'block' : 'none';
+        $('narcKitPanel').style.display = mode === 'kit' ? 'block' : 'none';
+      }
+      
+      function clearNarcForm(){
+        $('narcBarcode').value = '';
+        $('narcLot').value = '';
+        $('narcExp').value = '';
+        $('narcQty').value = '';
+        $('narcName').value = '';
+      }
+      
+      function saveNarcClient(){
+        const payload = {
+          name: $('narcName').value || '',
+          barcode: $('narcBarcode').value || '',
+          lot: $('narcLot').value || '',
+          exp: $('narcExp').value || '',
+          qty: Number($('narcQty').value || 0),
+          location: $('narcLocation').value || ''
+        };
+        jsonpCall('saveNarc', payload, function(res){
+          if(!res || res.success === false){
+            alert((res && res.message) ? res.message : 'Save failed');
+            return;
+          }
+          clearNarcForm();
+          alert(res.message || 'Saved');
+          refreshAll();
+        });
+      }
+
+      function initNarcKitRows(){
+        const tbody = $('narcKitBody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        addNarcKitRow();
+        addNarcKitRow();
+      }
+      
+      function addNarcKitRow(){
+        const tbody = $('narcKitBody');
+        const idx = tbody.querySelectorAll('tr.narcKitRow').length + 1;
+      
+        const tr = document.createElement('tr');
+        tr.className = 'narcKitRow';
+        tr.id = 'narcKitRow-' + idx;
+      
+        tr.innerHTML =
+          '<td data-label="Scan / Lot # / Name">' +
+            '<div class="scanWrap">' +
+              '<input id="nscan-' + idx + '" placeholder="Scan barcode / lot / name" />' +
+              '<button id="nsearch-' + idx + '" class="btn small secondary">🔍</button>' +
+              '<button id="ncam-' + idx + '" class="cameraBtn">📷</button>' +
+            '</div>' +
+            '<div id="nmatch-' + idx + '"></div>' +
+          '</td>' +
+          '<td data-label="Narc Name"><input id="nname-' + idx + '"/></td>' +
+          '<td data-label="Lot"><input id="nlot-' + idx + '"/></td>' +
+          '<td data-label="Expiration"><input id="nexp-' + idx + '" type="date"/></td>' +
+          '<td data-label="Inv Qty"><input id="ninv-' + idx + '" type="number" class="gray" disabled /></td>' +
+          '<td data-label="Kit Qty"><input id="nkitqty-' + idx + '" type="number" min="0" value="1"/></td>' +
+          '<td data-label="Status"><input id="nstat-' + idx + '" disabled /></td>';
+      
+        tbody.appendChild(tr);
+      
+        $('nsearch-' + idx).addEventListener('click', () => narcKitLookup(idx));
+        $('nscan-' + idx).addEventListener('keydown', ev => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            narcKitLookup(idx);
+          }
+        });
+      }
+      
+      function narcKitLookup(idx){
+        const input = $('nscan-' + idx);
+        const q = (input.value || '').trim();
+        if(!q){ alert('Type or scan something first'); return; }
+      
+        jsonpCall('searchNarcStock', { q }, function(res){
+          const holder = $('nmatch-' + idx);
+          if(holder) holder.innerHTML = '';
+      
+          if(!res || !res.found || !res.matches || res.matches.length === 0){
+            showNarcKitInline(idx, q, false);
+            return;
+          }
+      
+          const code = q.toLowerCase();
+          const exact = res.matches.filter(m => String(m.barcode || '').trim().toLowerCase() === code);
+          if(exact.length === 1){
+            applyNarcKitMatch(idx, exact[0]);
+            return;
+          }
+          if(exact.length > 1){
+            showNarcKitMatches(idx, exact);
+            return;
+          }
+          if(res.matches.length === 1){
+            applyNarcKitMatch(idx, res.matches[0]);
+            return;
+          }
+          showNarcKitMatches(idx, res.matches);
+        });
+      }
+      
+      function showNarcKitMatches(idx, matches){
+        const holder = $('nmatch-' + idx);
+        if(!holder) return;
+        holder.innerHTML = '';
+        const list = document.createElement('div');
+        list.className = 'matchList';
+        matches.forEach(m => {
+          const item = document.createElement('div');
+          item.className = 'matchItem';
+          item.innerHTML = '<div><strong>' + esc(m.name || '-') + '</strong> — Lot:' + esc(m.lot || '-') + ' — Exp:' + esc(formatDateMMDDYYYY(m.exp)) + ' — Qty:' + esc(m.qty || 0) + ' — Status:' + esc(enhanceStatus(m.status, m.exp)) + '</div>';
+          const btn = document.createElement('button');
+          btn.className = 'btn small';
+          btn.textContent = 'Select';
+          btn.addEventListener('click', () => applyNarcKitMatch(idx, m));
+          item.appendChild(btn);
+          list.appendChild(item);
+        });
+        holder.appendChild(list);
+      }
+      
+      function applyNarcKitMatch(idx, match){
+        const name = $('nname-' + idx);
+        const lot = $('nlot-' + idx);
+        const exp = $('nexp-' + idx);
+        const inv = $('ninv-' + idx);
+        const stat = $('nstat-' + idx);
+        const scan = $('nscan-' + idx);
+      
+        if(name){ name.value = match.name || ''; name.disabled = true; }
+        if(lot){ lot.value = match.lot || ''; lot.disabled = true; }
+        if(exp){ exp.value = match.exp || ''; exp.disabled = true; }
+        if(inv){ inv.value = ''; inv.disabled = true; }
+        if(stat){ stat.value = enhanceStatus(match.status, match.exp) || 'OK'; }
+      
+        if(scan){
+          scan.dataset.barcode = match.barcode || '';
+          scan.dataset.name = match.name || '';
+          scan.dataset.lot = match.lot || '';
+          scan.dataset.exp = match.exp || '';
+          scan.dataset.qty = match.qty || '';
+        }
+        if($('nmatch-' + idx)) $('nmatch-' + idx).innerHTML = '';
+        maybeAddNarcKitRow();
+      }
+      
+      function showNarcKitInline(idx, scannedValue){
+        const name = $('nname-' + idx);
+        const lot = $('nlot-' + idx);
+        const exp = $('nexp-' + idx);
+        const inv = $('ninv-' + idx);
+        const stat = $('nstat-' + idx);
+        const scan = $('nscan-' + idx);
+      
+        if(name){ name.disabled = false; name.value = scannedValue; }
+        if(lot){ lot.disabled = false; }
+        if(exp){ exp.disabled = false; }
+        if(inv){ inv.disabled = false; inv.classList.remove('gray'); inv.value = ''; }
+        if(stat){ stat.value = computeStatusFromExp(exp ? exp.value : ''); }
+      
+        if(scan){
+          delete scan.dataset.barcode;
+          delete scan.dataset.name;
+          delete scan.dataset.lot;
+          delete scan.dataset.exp;
+        }
+      
+        if(exp){
+          exp.oninput = function(){
+            if(stat) stat.value = computeStatusFromExp(exp.value || '');
+          };
+        }
+      }
+      
+      function maybeAddNarcKitRow(){
+        const rows = document.querySelectorAll('tr.narcKitRow');
+        if(rows.length === 0){ addNarcKitRow(); return; }
+        const lastIndex = rows.length;
+        const lastInput = $('nname-' + lastIndex);
+        if(lastInput && lastInput.value && lastInput.value.trim() !== '') addNarcKitRow();
+      }
+      
+      function collectNarcKitEntries(){
+        const kitId = $('narcKitSelect').value || '';
+        if(!kitId){ alert('Select a Narc Kit ID first'); return null; }
+      
+        const rows = Array.from(document.querySelectorAll('tr.narcKitRow'));
+        const entries = [];
+      
+        rows.forEach((r, i) => {
+          const idx = i + 1;
+          const scan = $('nscan-' + idx);
+          if(!scan) return;
+      
+          const qty = Number($('nkitqty-' + idx).value || 0);
+          const name = $('nname-' + idx) ? $('nname-' + idx).value.trim() : '';
+          const barcode = scan.dataset.barcode || '';
+          const lot = $('nlot-' + idx) ? $('nlot-' + idx).value.trim() : '';
+          const exp = $('nexp-' + idx) ? $('nexp-' + idx).value : '';
+          const status = $('nstat-' + idx) ? $('nstat-' + idx).value.trim() : '';
+      
+          if ((name || barcode || lot) && qty > 0) {
+            entries.push({
+              kitId: kitId,
+              name: name,
+              barcode: barcode,
+              lot: lot,
+              exp: exp,
+              qty: qty,
+              status: status
+            });
+          }
+        });
+      
+        return entries;
+      }
+      
+      function submitNarcKitClient(){
+        const entries = collectNarcKitEntries();
+        if(entries === null) return;
+        if(entries.length === 0){ alert('No valid items to submit'); return; }
+      
+        jsonpCall('submitNarcKit', entries, function(res){
+          if(!res || res.success === false){
+            alert((res && res.message) ? res.message : 'Submit failed');
+            return;
+          }
+          alert(res.message || 'Submitted');
+          initNarcKitRows();
+          refreshAll();
+        });
       }
 
       function populateBagSelects(){
@@ -529,12 +898,18 @@
         if(statusSel){ const cur = statusSel.value; statusSel.innerHTML = '<option value="">-- select status --</option>'; (equipmentLookups.statuses || []).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; statusSel.appendChild(o); }); if(cur) statusSel.value = cur; }
         if(reasonSel){ const cur = reasonSel.value; reasonSel.innerHTML = '<option value="">-- select reason --</option>'; (equipmentLookups.serviceReasons || []).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; reasonSel.appendChild(o); }); if(cur) reasonSel.value = cur; }
       }
-
+      function onDashboardViewToggle(){
+        const view = $('dashboardViewSelect').value;
+        $('bagSelectorWrap').style.display = view === 'bags' ? 'block' : 'none';
+        $('narcsSelectorWrap').style.display = view === 'kits' ? 'block' : 'none';   
+        else renderDashboardBags();
+      }
       function renderDashboard(){
         const view = $('dashboardViewSelect').value || 'items';
-        $('bagSelectorWrap').style.display = view === 'bags' ? 'block' : 'none';
         if(view === 'items') renderDashboardItems();
         else if(view === 'equipment') renderDashboardEquipment();
+        else if(view === 'narcs') renderDashboardNarcs();
+        else if(view === 'kits') renderDashboardkitss();   
         else renderDashboardBags();
       }
       function renderDashboardItems(){
@@ -573,6 +948,76 @@
           body.appendChild(tr);
         });
       }
+      function renderDashboardNarcs(){
+        const body = $('dashboardBody');
+        const head = $('dashboardHead').querySelector('tr');
+        head.innerHTML = '<th>Narc Name</th><th>Barcode</th><th>Lot Number</th><th>Expiration</th><th>Quantity</th><th>Location</th><th>Last Updated</th><th>AddedBy</th>';
+        body.innerHTML = '';
+      
+        const rows = (dashboardData && dashboardData.narcs) ? dashboardData.narcs.slice() : [];
+        if(!rows.length){
+          body.innerHTML = '<tr><td colspan="8" class="small">No narc stock</td></tr>';
+          return;
+        }
+      
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + esc(r.name) + '</td>' +
+            '<td>' + esc(r.barcode) + '</td>' +
+            '<td>' + esc(r.lotNumber) + '</td>' +
+            '<td>' + esc(formatDateMMDDYYYY(r.expirationDate)) + '</td>' +
+            '<td>' + esc(r.quantity) + '</td>' +
+            '<td>' + esc(r.location) + '</td>' +
+            '<td>' + esc(r.lastUpdated) + '</td>' +
+            '<td>' + esc(r.addedBy) + '</td>';
+          body.appendChild(tr);
+        });
+      }
+      
+      function populateDashboardNarcKitSelect(){
+        const sel = $('dashboardNarcKitSelect');
+        if(!sel) return;
+      
+        sel.innerHTML = '<option value="">-- select kit --</option>';
+        const kits = (dashboardData && dashboardData.narcKits) ? dashboardData.narcKits : [];
+        kits.forEach(k => {
+          const id = k.bronxcare || k.citywide;
+          if(!id) return;
+          const o = document.createElement('option');
+          o.value = id;
+          o.textContent = id;
+          sel.appendChild(o);
+        });
+      }
+      
+      function renderDashboardKits(){
+        const selectedKit = $('dashboardNarcKitSelect').value;
+        const body = $('dashboardBody');
+        const head = $('dashboardHead').querySelector('tr');
+        head.innerHTML = '<th>Narc Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Qty</th><th>Status</th>';
+        body.innerHTML = '<tr><td colspan="6" class="small">Select a kit</td></tr>';
+        if(!selectedKit) return;
+      
+        jsonpCall('getNarcKitContents', { kitId: selectedKit }, function(results){
+          body.innerHTML = '';
+          if(!results || !results.length){
+            body.innerHTML = '<tr><td colspan="6" class="small">No kit data</td></tr>';
+            return;
+          }
+      
+          results.forEach(r => {
+            const itemsHtml = (r.items || []).map(it =>
+              '<div style="padding:4px 0">' + esc(it.name || '') + ' | ' + esc(it.lot || '') + ' | ' + esc(formatDateMMDDYYYY(it.exp)) + ' | ' + esc(it.qty || 0) + '</div>'
+            ).join('');
+      
+            const tr = document.createElement('tr');
+            tr.innerHTML = '<td colspan="6">' + itemsHtml + '</td>';
+            body.appendChild(tr);
+          });
+        });
+      }
+      
       function renderDashboardBags(){
         const selectedBag = $('dashboardBagSelect').value;
         const body = $('dashboardBody'), head = $('dashboardHead').querySelector('tr');
@@ -1103,22 +1548,29 @@
       $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
       $('btnEquipment').addEventListener('click', ()=> showCard('equipmentCard'));
       $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
+      $('btnNarcotics').addEventListener('click', ()=> showCard('narcoticsCard'));
       $('btnSignOut').addEventListener('click', signOutUser);
       $('dashboardViewSelect').addEventListener('change', renderDashboard);
       $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
+      $('narcMode').addEventListener('change', toggleNarcMode);
+      $('narcLocation').addEventListener('change', loadNarcLookups);
       $('hideExpired').addEventListener('change', renderDashboard);
       $('hideOutOfStock').addEventListener('change', renderDashboard);
       $('createCloseCam').addEventListener('click', stopScanner);
       $('equipmentCloseCam').addEventListener('click', stopScanner);
       $('createSave').addEventListener('click', createItemClient);
       $('createClear').addEventListener('click', clearCreateForm);
-      $('createCategory').addEventListener('change', ()=> populateReqDatalist($('createCategory').value || ''));
+      $('createCategory').addEventListener('change', ()=> populateReqDatalist($('createCategory').value || '')); 
       $('resetRows').addEventListener('click', initRestockRows);
       $('submitAll').addEventListener('click', submitAll);
       $('equipmentSearchBtn').addEventListener('click', searchEquipmentClient);
       $('equipmentSave').addEventListener('click', saveEquipmentClient);
       $('equipmentClear').addEventListener('click', clearEquipmentForm);
       $('equipmentCurrentStatus').addEventListener('change', updateEquipmentStatusUI);
+      $('saveNarcBtn').addEventListener('click', saveNarcClient);
+      $('clearNarcBtn').addEventListener('click', clearNarcForm);
+      $('narcKitResetRows').addEventListener('click', initNarcKitRows);
+      $('narcKitSubmitAll').addEventListener('click', submitNarcKitClient);
 
       $('createCameraBtn').addEventListener('click', ()=> {
         const wrap = $('createScanner');
