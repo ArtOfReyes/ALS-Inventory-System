@@ -571,29 +571,40 @@ function renderDashboardNarcs(){
     body.appendChild(tr);
   });
 }
-
-
+	
 function renderDashboardKits(){
   const selectedKit = $('dashboardNarcKitSelect').value;
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
-  head.innerHTML = '<th>Narc Name</th><th>Details</th>';
-  body.innerHTML = '<tr><td colspan="2" class="small">Select a kit</td></tr>';
+  head.innerHTML = '<th>Narc Name</th><th>Lot Number</th><th>Expiration Date</th><th>Quantity</th><th>Status</th>';
+  body.innerHTML = '<tr><td colspan="5" class="small">Select a kit</td></tr>';
   if(!selectedKit) return;
+
   jsonpCall('getNarcKitContents', { kitId: selectedKit }, function(results){
     body.innerHTML = '';
     if(!results || !results.length){
-      body.innerHTML = '<tr><td colspan="2" class="small">No kit data</td></tr>';
+      body.innerHTML = '<tr><td colspan="5" class="small">No kit data</td></tr>';
       return;
     }
+
     results.forEach(r=>{
-      const rows = r.items || [];
-      const details = rows.length
-        ? rows.map(it => '<div style="padding:4px 0 4px 18px">'+esc(it.name||'')+' | '+esc(it.lot||'')+' | '+esc(formatDateMMDDYYYY(it.exp))+' | '+esc(it.qty||0)+' | '+esc(it.status||'')+'</div>').join('')
-        : '<div style="padding:4px 0 4px 18px" class="small">No items</div>';
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td style="vertical-align:top"><strong>'+esc(r.name || '')+'</strong></td><td style="vertical-align:top">'+details+'</td>';
-      body.appendChild(tr);
+      if(!r.items || !r.items.length){
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>'+esc(r.name||'')+'</td><td></td><td></td><td></td><td></td>';
+        body.appendChild(tr);
+        return;
+      }
+
+      r.items.forEach(it=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>'+esc(it.name || '')+'</td>' +
+          '<td>'+esc(it.lot || '')+'</td>' +
+          '<td>'+esc(formatDateMMDDYYYY(it.exp))+'</td>' +
+          '<td>'+esc(it.qty || 0)+'</td>' +
+          '<td>'+esc(it.status || '')+'</td>';
+        body.appendChild(tr);
+      });
     });
   });
 }
