@@ -209,6 +209,7 @@
           <select id="narcMode">
             <option value="create">Create Narc</option>
             <option value="kit">Narc Kit Restock</option>
+            <option value="verify">Narc Kit Verification</option>
           </select>
         </div>
         <div>
@@ -247,6 +248,19 @@
         <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
           <button id="narcKitResetRows" class="btn secondary">Reset rows</button>
           <button id="narcKitSubmitAll" class="btn">Submit All</button>
+        </div>
+      </div>
+      <div id="narcVerifyPanel" style="display:none;margin-top:14px">
+        <div style="margin-bottom:10px"><label>Narc Kit ID</label><select id="narcVerifySelect"></select></div>
+        <div class="tableWrap">
+          <table>
+            <thead><tr><th>Active</th><th>Narc Name</th><th>Lot</th><th>Expiration</th><th>Inv Qty</th><th>Status</th></tr></thead>
+            <tbody id="narcVerifyBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
+          <button id="narcVerifyResetRows" class="btn secondary">Reset rows</button>
+          <button id="narcVerifySubmitAll" class="btn">Submit All</button>
         </div>
       </div>
     </div>
@@ -333,6 +347,12 @@ function showCard(id){
     const el = $(c);
     if(el) el.style.display = (c===id) ? 'block' : 'none';
   });
+  if(id === 'narcoticsCard'){
+    if($('narcMode') && !$('narcMode').value) $('narcMode').value = 'create';
+    toggleNarcMode();
+    loadNarcLookups();
+    if($('narcMode') && $('narcMode').value === 'verify') loadNarcVerifyRows();
+  }
   stopScanner();
 }
 
@@ -388,7 +408,7 @@ function loadRequiredItems(){ jsonpCall('getRequiredItems', null, function(resp)
 function loadBagList(){ jsonpCall('getBagList', null, function(resp){ bagList = resp || []; populateBagSelects(); }); }
 function loadCategories(){ jsonpCall('getCategories', null, function(resp){ categories = resp || []; populateCategories(); }); }
 function loadEquipmentLookups(){ jsonpCall('getEquipmentLookups', null, function(resp){ equipmentLookups = resp || { types:[], locations:[], statuses:[], serviceReasons:[] }; populateEquipmentLookups(); }); }
-function loadNarcLookups(){ jsonpCall('getNarcLookups', { location: $('narcLocation') ? $('narcLocation').value : 'Bronxcare' }, function(resp){ narcLookups = resp || { narcNames:[], narcKits:[] }; populateNarcNameList(); populateNarcKitSelect(); }); }
+function loadNarcLookups(){ jsonpCall('getNarcLookups', { location: $('narcLocation') ? $('narcLocation').value : 'Bronxcare' }, function(resp){ narcLookups = resp || { narcNames:[], narcKits:[] }; populateNarcNameList(); populateNarcKitSelect(); populateNarcVerifySelect(); if($('narcMode') && $('narcMode').value === 'verify') loadNarcVerifyRows(); }); }
 
 function populateBagSelects(){
   const sel = $('bagSelect');
@@ -470,6 +490,12 @@ function populateNarcNameList(){
 }
 function populateNarcKitSelect(){
   const sel = $('narcKitSelect');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- select --</option>';
+  (narcLookups.narcKits || []).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o); });
+}
+function populateNarcVerifySelect(){
+  const sel = $('narcVerifySelect');
   if(!sel) return;
   sel.innerHTML = '<option value="">-- select --</option>';
   (narcLookups.narcKits || []).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o); });
@@ -719,28 +745,120 @@ function clearNarcForm(){
   $('narcName').value = '';
 }
 function saveNarcClient(){
-  const payload = {
-    name: $('narcName').value || '',
-    barcode: $('narcBarcode').value || '',
-    lot: $('narcLot').value || '',
-    exp: $('narcExp').value || '',
-    qty: Number($('narcQty').value || 0),
-    location: $('narcLocation').value || ''
-  };
-  jsonpCall('saveNarc', payload, function(res){
-    if(!res || res.success === false){
-      alert((res && res.message) ? res.message : 'Save failed');
+  const btn = $('saveNarcBtn');
+  disableButton(btn, () => new Promise((resolve) => {
+    const payload = {
+      name: $('narcName').value || '',
+      barcode: $('narcBarcode').value || '',
+      lot: $('narcLot').value || '',
+      exp: $('narcExp').value || '',
+      qty: Number($('narcQty').value || 0),
+      location: $('narcLocation').value || ''
+    };
+    jsonpCall('saveNarc', payload, function(res){
+      if(!res || res.success === false){
+        alert((res && res.message) ? res.message : 'Save failed');
+        resolve();
+        return;
+      }
+      clearNarcForm();
+      alert(res.message || 'Saved');
+      refreshAll();
+      resolve();
+    });
+  }));
+}
+
+function loadNarcVerifyRows(){
+  const kitId = $('narcVerifySelect') ? $('narcVerifySelect').value : '';
+  const tbody = $('narcVerifyBody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  if(!kitId){
+    tbody.innerHTML = '<tr><td colspan="6" class="small">Select a kit</td></tr>';
+    return;
+  }
+  jsonpCall('getNarcKitContents', { kitId: kitId }, function(results){
+    tbody.innerHTML = '';
+    const rows = [];
+    (results || []).forEach(group => {
+      (group.items || []).forEach(it => {
+        rows.push({
+          kitId: kitId,
+          name: it.name || group.name || '',
+          barcode: it.barcode || '',
+          lot: it.lot || '',
+          exp: it.exp || '',
+          qty: Number(it.qty || 0),
+          status: it.status || ''
+        });
+      });
+    });
+    if(!rows.length){
+      tbody.innerHTML = '<tr><td colspan="6" class="small">No kit data</td></tr>';
       return;
     }
-    clearNarcForm();
-    alert(res.message || 'Saved');
-    refreshAll();
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.className = 'narcVerifyRow';
+      tr.innerHTML =
+        '<td><input type="checkbox" class="narcVerifyActive" data-kit="'+esc(r.kitId)+'" data-name="'+esc(r.name)+'" data-barcode="'+esc(r.barcode)+'" data-lot="'+esc(r.lot)+'" data-exp="'+esc(r.exp)+'" data-qty="'+esc(r.qty)+'" data-status="'+esc(r.status)+'" checked></td>' +
+        '<td>'+esc(r.name)+'</td>' +
+        '<td>'+esc(r.lot)+'</td>' +
+        '<td>'+esc(formatDateMMDDYYYY(r.exp))+'</td>' +
+        '<td>'+esc(r.qty)+'</td>' +
+        '<td>'+esc(r.status || '')+'</td>';
+      tbody.appendChild(tr);
+    });
   });
 }
+
+function collectNarcVerifyEntries(){
+  const kitId = $('narcVerifySelect') ? $('narcVerifySelect').value : '';
+  if(!kitId){ alert('Select a Narc Kit ID first'); return null; }
+  const checks = Array.from(document.querySelectorAll('.narcVerifyActive')).filter(cb => cb.checked);
+  const entries = checks.map(cb => ({
+    kitId,
+    name: cb.dataset.name || '',
+    barcode: cb.dataset.barcode || '',
+    lot: cb.dataset.lot || '',
+    exp: cb.dataset.exp || '',
+    qty: Number(cb.dataset.qty || 0),
+    status: cb.dataset.status || '',
+    active: true
+  })).filter(e => e.name || e.barcode || e.lot);
+  return entries;
+}
+
+function submitNarcVerifyClient(){
+  const btn = $('narcVerifySubmitAll');
+  disableButton(btn, () => new Promise((resolve) => {
+    const entries = collectNarcVerifyEntries();
+    if(entries === null){ resolve(); return; }
+    if(entries.length === 0){ alert('No active items selected'); resolve(); return; }
+    jsonpCall('submitNarcKitVerification', entries, function(res){
+      if(!res || res.success === false){
+        alert((res && res.message) ? res.message : 'Submit failed');
+        resolve();
+        return;
+      }
+      alert(res.message || 'Verification saved');
+      loadNarcVerifyRows();
+      refreshAll();
+      resolve();
+    });
+  }));
+}
+
+
 function toggleNarcMode(){
-  const mode = $('narcMode').value;
-  $('createNarcPanel').style.display = mode === 'create' ? 'block' : 'none';
-  $('narcKitPanel').style.display = mode === 'kit' ? 'block' : 'none';
+  const mode = $('narcMode') ? $('narcMode').value : 'create';
+  const createPanel = $('createNarcPanel');
+  const kitPanel = $('narcKitPanel');
+  const verifyPanel = $('narcVerifyPanel');
+  if(createPanel) createPanel.style.display = mode === 'create' ? 'block' : 'none';
+  if(kitPanel) kitPanel.style.display = mode === 'kit' ? 'block' : 'none';
+  if(verifyPanel) verifyPanel.style.display = mode === 'verify' ? 'block' : 'none';
 }
 
 function initRestockRows(){
@@ -1184,7 +1302,7 @@ function applyNarcKitMatch(idx, match){
   if(name){ name.value = match.name || ''; name.disabled = true; }
   if(lot){ lot.value = match.lot || ''; lot.disabled = true; }
   if(exp){ exp.value = match.exp || ''; exp.disabled = true; }
-  if(inv){ inv.value = ''; inv.disabled = true; inv.classList.add('gray'); }
+  if(inv){ inv.value = String(match.qty ?? 0); inv.disabled = true; inv.classList.add('gray'); }
   if(stat){ stat.value = enhanceStatus(match.status, match.exp) || 'OK'; }
 
   if(scan){
@@ -1216,7 +1334,7 @@ function showNarcKitInline(idx, scannedValue){
   }
   if(lot){ lot.disabled = false; }
   if(exp){ exp.disabled = false; }
-  if(inv){ inv.disabled = false; inv.classList.remove('gray'); inv.value = ''; }
+  if(inv){ inv.disabled = true; inv.classList.add('gray'); inv.value = ''; }
   if(stat){ stat.value = computeStatusFromExp(exp ? exp.value : ''); }
 
   if(scan){
@@ -1294,6 +1412,7 @@ window.onload = function(){
   $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
   $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
   $('dashboardNarcKitSelect').addEventListener('change', ()=> renderDashboardKits());
+  if($('narcVerifySelect')) $('narcVerifySelect').addEventListener('change', ()=> loadNarcVerifyRows());
   $('hideExpired').addEventListener('change', renderDashboard);
   $('hideOutOfStock').addEventListener('change', renderDashboard);
   $('createCloseCam').addEventListener('click', stopScanner);
@@ -1308,12 +1427,14 @@ window.onload = function(){
   $('equipmentClear').addEventListener('click', clearEquipmentForm);
   $('equipmentCurrentStatus').addEventListener('change', updateEquipmentStatusUI);
 
-  $('narcMode').addEventListener('change', toggleNarcMode);
+  $('narcMode').addEventListener('change', function(){ toggleNarcMode(); if(this.value === 'verify') loadNarcVerifyRows(); });
   $('narcLocation').addEventListener('change', loadNarcLookups);
   $('saveNarcBtn').addEventListener('click', saveNarcClient);
   $('clearNarcBtn').addEventListener('click', clearNarcForm);
   $('narcKitResetRows').addEventListener('click', initNarcKitRows);
   $('narcKitSubmitAll').addEventListener('click', submitNarcKitClient);
+  if($('narcVerifyResetRows')) $('narcVerifyResetRows').addEventListener('click', loadNarcVerifyRows);
+  if($('narcVerifySubmitAll')) $('narcVerifySubmitAll').addEventListener('click', submitNarcVerifyClient);
 
   $('createCameraBtn').addEventListener('click', ()=> {
     const wrap = $('createScanner');
@@ -1335,6 +1456,10 @@ window.onload = function(){
       jsonpCall('syncInventoryStock', null, function(){ setTimeout(()=>{ location.reload(); resolve(); }, 400); });
     }));
   });
+
+  if ($('narcMode') && !$('narcMode').value) $('narcMode').value = 'create';
+  toggleNarcMode();
+  loadNarcLookups();
 
   function initGoogle() {
     if (window.google && google.accounts && google.accounts.id) {
