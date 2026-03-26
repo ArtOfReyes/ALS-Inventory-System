@@ -361,6 +361,14 @@ function showCard(id){
     const el = $(c);
     if(el) el.style.display = (c===id) ? 'block' : 'none';
   });
+
+  if (id === 'narcoticsCard') {
+    const mode = $('narcMode');
+    if (mode && !mode.value) mode.value = 'create';
+    toggleNarcMode();
+    loadNarcLookups();
+  }
+
   stopScanner();
 }
 
@@ -766,9 +774,14 @@ function saveNarcClient(){
   });
 }
 function toggleNarcMode(){
-  const mode = $('narcMode').value;
-  $('createNarcPanel').style.display = mode === 'create' ? 'block' : 'none';
-  $('narcKitPanel').style.display = mode === 'kit' ? 'block' : 'none';
+  const modeEl = $('narcMode');
+  const mode = modeEl ? modeEl.value : 'create';
+
+  const createPanel = $('createNarcPanel');
+  const kitPanel = $('narcKitPanel');
+
+  if (createPanel) createPanel.style.display = mode === 'create' ? 'block' : 'none';
+  if (kitPanel) kitPanel.style.display = mode === 'kit' ? 'block' : 'none';
 }
 
 function initRestockRows(){
@@ -1362,6 +1375,12 @@ window.onload = function(){
     disableButton(this, () => new Promise((resolve) => {
       jsonpCall('syncInventoryStock', null, function(){ setTimeout(()=>{ location.reload(); resolve(); }, 400); });
     }));
+
+	if ($('narcMode') && !$('narcMode').value) {
+	  $('narcMode').value = 'create';
+	}
+	toggleNarcMode();
+	loadNarcLookups();
   });
 
   function initGoogle() {
