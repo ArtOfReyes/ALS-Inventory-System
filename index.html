@@ -7,7 +7,10 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    :root{ --primary:#0b5fff; --on-primary:#fff; --muted:#6b7280; --card:#fff; --border:#e6e9ee; --radius:10px; font-family:Segoe UI,Roboto,Arial; font-size:15px; }
+    :root{
+      --primary:#0b5fff; --on-primary:#fff; --muted:#6b7280; --card:#fff; --border:#e6e9ee; --radius:10px;
+      font-family:Segoe UI,Roboto,Arial; font-size:15px;
+    }
     body{margin:0;background:#fff;color:#0f172a}
     .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
     .brand{display:flex;align-items:center;gap:12px}
@@ -34,11 +37,12 @@
     .matchList{border:1px solid var(--border);border-radius:8px;max-height:260px;overflow:auto;margin-top:8px;background:#fff}
     .matchItem{padding:8px 10px;border-bottom:1px solid #f3f6fb;display:flex;justify-content:space-between;align-items:center;gap:10px}
     .instruction{background:#f0f7ff;border-left:4px solid var(--primary);padding:10px;margin:10px 0;border-radius:0 8px 8px 0;}
+    .instruction p{margin:5px 0;}
     .filter-row{display:flex;gap:24px;margin:16px 0;padding:12px 16px;background:#f9fafc;border-radius:10px;border:1px solid var(--border);align-items:center;flex-wrap:wrap}
     .filter-row label{display:flex;align-items:center;gap:8px;font-weight:500;color:#1e293b}
-    #bagCard .tableWrap td .scanWrap, #narcoticsCard .tableWrap td .scanWrap{display:flex;gap:6px;align-items:center}
-    #bagCard .tableWrap td .scanWrap input, #narcoticsCard .tableWrap td .scanWrap input{flex:1;min-width:0;padding:8px}
-    #bagCard .tableWrap td input[type="number"], #narcoticsCard .tableWrap td input[type="number"]{width:92px}
+    #bagCard .tableWrap td .scanWrap, #narcKitCard .tableWrap td .scanWrap{display:flex;gap:6px;align-items:center}
+    #bagCard .tableWrap td .scanWrap input, #narcKitCard .tableWrap td .scanWrap input{flex:1;min-width:0;padding:8px}
+    #bagCard .tableWrap td input[type="number"], #narcKitCard .tableWrap td input[type="number"]{width:92px}
     .gray { background:#eef2f7; color:#64748b; }
     .rowScannerContainer{border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px;background:#fff}
     .signedInWrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -104,14 +108,7 @@
     <div id="createCard" class="card" style="display:none">
       <h3>Create Inventory Item</h3>
       <div class="instruction">
-        <p><strong>Instructions:</strong><br>
-         • Select a <strong>Category</strong> from the dropdown.<br>
-         • Select an <strong>Item</strong> from the dropdown.<br>
-         • Press the camera icon to scan or type the Barcode (if available).<br>
-         • Type the Lot number (if available).<br>
-         • Choose an Expiration date (if available).<br>
-         • Enter the Quantity you are adding to stock.<br>
-         • Once you are finished, press <strong>Save item</strong> and the data will be transfered to the database.</p>
+        <p><strong>How to add a new item:</strong> Select a category, enter the item name, scan or type the barcode (if available), type the lot number, choose an expiration date, and enter the quantity you are adding to stock. Then click <strong>Save item</strong>.</p>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
         <div><label>Category</label><select id="createCategory"><option value="">-- none --</option></select></div>
@@ -133,17 +130,6 @@
 
     <div id="equipmentCard" class="card" style="display:none">
       <h3>Equipment Inventory</h3>
-        <div class="instruction">
-          <p><strong>Instructions:</strong><br>
-           • Press the camera icon to scan a barcode or type the lot number/item name and press the search icon in the first column.<br>
-	       • Existing equipment: fields lock and the fields for Assigned Location and Current Status remains editable.<br>
-           • Missing item: fill fields.<br>
-           • Select a <strong>Location</strong> from the dropdown.<br>
-	       • Select a <strong>Status</strong> from the dropdown.<br>
-           &nbsp;&nbsp;&nbsp;&nbsp;- Active status will have new fields appear for date returned, in-service date, and upcoming service date.<br>
-           &nbsp;&nbsp;&nbsp;&nbsp;- OOS status will have new fields appear for the service reason, comments, and date shipped.<br>
-           • Once you are finished, press <strong>Save Equipment</strong> and the data will be transfered to the database.</p>
-        </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
         <div>
           <label>Barcode</label>
@@ -192,11 +178,9 @@
       <div class="instruction">
         <p><strong>Instructions:</strong><br>
         • First, select a bag number from the dropdown above the table.<br>
-        • Press the camera icon to scan a barcode or type the lot number/item name and press the search icon in the first column.<br>
+        • Scan or type a barcode/lot number/item name in the first column.<br>
         • Existing item: fields lock and Bag Qty remains editable.<br>
-        • Missing item: fill fields, choose replacement, then click Add & Use.<br>
-        • Once you are finished, press <strong>Submit All</strong> and the data will be transfered to the database.
-        </p>
+        • Missing item: fill fields, choose replacement, then click Add & Use.</p>
       </div>
       <div style="height:10px"></div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
@@ -219,15 +203,6 @@
 
     <div id="narcoticsCard" class="card" style="display:none">
       <h3>Narcotics</h3>
-        <div class="instruction">
-          <p><strong>Instructions:</strong><br>
-           • First, select a <strong>Mode</strong> from the dropdown.<br>
-           &nbsp;&nbsp;&nbsp;&nbsp;- Create Narc is used to add the narc to the overall stock.<br>
-           &nbsp;&nbsp;&nbsp;&nbsp;- Narc Kit Restock is used to move the selected narcs to the designated kit.<br>
-           • Select a <strong>Location</strong> from the dropdown.<br>
-           • Enter the data for each field.<br>
-           • Once you are finished, press <strong>Save Narc/Submit All</strong> and the data will be transfered to the database.</p>
-        </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
         <div>
           <label>Mode</label>
@@ -278,7 +253,7 @@
   </div>
 
 <script>
-const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbyTyrgDnfkGDKWs4RjbD2kA0OLeQJmMyz0hXCzEKX-qi37A89ZEsFGOAOBGecBh2p5q1Q/exec";
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 const $ = id => document.getElementById(id);
 const esc = s => s==null ? "" : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
@@ -358,12 +333,6 @@ function showCard(id){
     const el = $(c);
     if(el) el.style.display = (c===id) ? 'block' : 'none';
   });
-  if (id === 'narcoticsCard') {
-    const mode = $('narcMode');
-    if (mode && !mode.value) mode.value = 'create';
-    toggleNarcMode();
-    loadNarcLookups();
-  }
   stopScanner();
 }
 
@@ -378,6 +347,7 @@ function updateUserUI(email){
     ['btnDashboard','btnCreate','btnEquipment','btnRestock','btnNarcotics'].forEach(id => { const btn = $(id); if(btn) btn.disabled = false; });
   }
 }
+
 function signOutUser(){
   googleToken = null;
   currentUser = null;
@@ -418,7 +388,7 @@ function loadRequiredItems(){ jsonpCall('getRequiredItems', null, function(resp)
 function loadBagList(){ jsonpCall('getBagList', null, function(resp){ bagList = resp || []; populateBagSelects(); }); }
 function loadCategories(){ jsonpCall('getCategories', null, function(resp){ categories = resp || []; populateCategories(); }); }
 function loadEquipmentLookups(){ jsonpCall('getEquipmentLookups', null, function(resp){ equipmentLookups = resp || { types:[], locations:[], statuses:[], serviceReasons:[] }; populateEquipmentLookups(); }); }
-function loadNarcLookups(){ jsonpCall('getNarcLookups', { location: $('narcLocation') ? $('narcLocation').value : 'Bronxcare' }, function(resp){ narcLookups = resp || { narcNames:[], narcKits:[] }; populateNarcNameList(); populateNarcKitSelect(); refreshNarcKitRowOptions(); }); }
+function loadNarcLookups(){ jsonpCall('getNarcLookups', { location: $('narcLocation') ? $('narcLocation').value : 'Bronxcare' }, function(resp){ narcLookups = resp || { narcNames:[], narcKits:[] }; populateNarcNameList(); populateNarcKitSelect(); }); }
 
 function populateBagSelects(){
   const sel = $('bagSelect');
@@ -504,26 +474,6 @@ function populateNarcKitSelect(){
   sel.innerHTML = '<option value="">-- select --</option>';
   (narcLookups.narcKits || []).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o); });
 }
-function populateNarcKitNameSelect(sel, selectedValue){
-  if(!sel) return;
-  const items = (narcLookups.narcNames || []);
-  sel.innerHTML = '<option value="">-- select narc --</option>';
-  items.forEach(n => {
-    const o = document.createElement('option');
-    o.value = n;
-    o.textContent = n;
-    sel.appendChild(o);
-  });
-  if(selectedValue && items.some(n => String(n).toLowerCase() === String(selectedValue).toLowerCase())){
-    sel.value = items.find(n => String(n).toLowerCase() === String(selectedValue).toLowerCase()) || '';
-  }
-}
-function refreshNarcKitRowOptions(){
-  document.querySelectorAll('tr.narcKitRow').forEach((row, i) => {
-    const sel = $('nname-' + (i + 1));
-    if(sel) populateNarcKitNameSelect(sel, sel.value || '');
-  });
-}
 
 function onDashboardViewToggle(){
   const v = $('dashboardViewSelect').value;
@@ -539,7 +489,6 @@ function renderDashboard(){
   else if(view === 'kits') renderDashboardKits();
   else renderDashboardBags();
 }
-
 function renderDashboardItems(){
   const body=$('dashboardBody'), head=$('dashboardHead').querySelector('tr');
   head.innerHTML = '<th>Item Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Remaining</th><th>Category</th><th>Status</th>';
@@ -556,13 +505,11 @@ function renderDashboardItems(){
   rows.forEach(r=>{
     let status = r.status;
     if (r.remaining <= 0) status = 'Out of Stock';
-    else if (status === 'Expiring Soon') status = enhanceStatus(status, r.expirationDate);
     const tr=document.createElement('tr');
     tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td><td>'+esc(r.remaining)+'</td><td>'+esc(r.category)+'</td><td>'+esc(status)+'</td>';
     body.appendChild(tr);
   });
 }
-
 function renderDashboardEquipment(){
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
@@ -578,7 +525,6 @@ function renderDashboardEquipment(){
     body.appendChild(tr);
   });
 }
-
 function renderDashboardNarcs(){
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
@@ -589,15 +535,11 @@ function renderDashboardNarcs(){
   if(!rows.length){ body.innerHTML = '<tr><td colspan="7" class="small">No narc stock</td></tr>'; return; }
   body.innerHTML = '';
   rows.forEach(r=>{
-    const exp = r.expirationDate || '';
-    let status = r.status || 'OK';
-    if (status === 'Expiring Soon') status = enhanceStatus(status, exp);
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(exp))+'</td><td>'+esc(r.quantity)+'</td><td>'+esc(r.location)+'</td><td>'+esc(status)+'</td>';
+    tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td><td>'+esc(r.quantity)+'</td><td>'+esc(r.location)+'</td><td>'+esc(r.status || '')+'</td>';
     body.appendChild(tr);
   });
 }
-	
 function renderDashboardKits(){
   const selectedKit = $('dashboardNarcKitSelect').value;
   const body = $('dashboardBody');
@@ -605,14 +547,12 @@ function renderDashboardKits(){
   head.innerHTML = '<th>Narc Name</th><th>Lot Number</th><th>Expiration Date</th><th>Quantity</th><th>Status</th>';
   body.innerHTML = '<tr><td colspan="5" class="small">Select a kit</td></tr>';
   if(!selectedKit) return;
-
   jsonpCall('getNarcKitContents', { kitId: selectedKit }, function(results){
     body.innerHTML = '';
     if(!results || !results.length){
       body.innerHTML = '<tr><td colspan="5" class="small">No kit data</td></tr>';
       return;
     }
-
     results.forEach(r=>{
       if(!r.items || !r.items.length){
         const tr = document.createElement('tr');
@@ -620,7 +560,6 @@ function renderDashboardKits(){
         body.appendChild(tr);
         return;
       }
-
       r.items.forEach(it=>{
         const tr = document.createElement('tr');
         tr.innerHTML =
@@ -634,7 +573,6 @@ function renderDashboardKits(){
     });
   });
 }
-
 function renderDashboardBags(){
   const selectedBag = $('dashboardBagSelect').value;
   const body = $('dashboardBody'), head = $('dashboardHead').querySelector('tr');
@@ -657,7 +595,14 @@ function clearCreateForm(){ $('createItemName').value=''; $('createBarcode').val
 function createItemClient(){
   const btn = $('createSave');
   disableButton(btn, () => new Promise((resolve) => {
-    const payload = { name: ($('createItemName').value||'').trim(), barcode: ($('createBarcode').value||'').trim(), lot: ($('createLot').value||'').trim(), exp: ($('createExp').value||'').trim(), qty: Number($('createQty').value||0), category: ($('createCategory').value||'').trim() };
+    const payload = {
+      name: ($('createItemName').value||'').trim(),
+      barcode: ($('createBarcode').value||'').trim(),
+      lot: ($('createLot').value||'').trim(),
+      exp: ($('createExp').value||'').trim(),
+      qty: Number($('createQty').value||0),
+      category: ($('createCategory').value||'').trim()
+    };
     if(!payload.name){ alert('Item name required'); resolve(); return; }
     jsonpCall('createItem', payload, function(res){
       if(!res || res.success===false){ alert((res && res.message) ? res.message : 'Create failed'); resolve(); return; }
@@ -766,25 +711,36 @@ function saveEquipmentClient(){
   }));
 }
 
-function clearNarcForm(){ $('narcBarcode').value=''; $('narcLot').value=''; $('narcExp').value=''; $('narcQty').value=''; $('narcName').value=''; }
+function clearNarcForm(){
+  $('narcBarcode').value = '';
+  $('narcLot').value = '';
+  $('narcExp').value = '';
+  $('narcQty').value = '';
+  $('narcName').value = '';
+}
 function saveNarcClient(){
-  const btn = $('saveNarcBtn');
-  disableButton(btn, () => new Promise((resolve) => {
-    const payload = { name: $('narcName').value || '', barcode: $('narcBarcode').value || '', lot: $('narcLot').value || '', exp: $('narcExp').value || '', qty: Number($('narcQty').value || 0), location: $('narcLocation').value || '' };
-    jsonpCall('saveNarc', payload, function(res){
-      if(!res || res.success === false){ alert((res && res.message) ? res.message : 'Save failed'); resolve(); return; }
-      clearNarcForm(); alert(res.message || 'Saved'); refreshAll(); resolve();
-    });
-  }));
+  const payload = {
+    name: $('narcName').value || '',
+    barcode: $('narcBarcode').value || '',
+    lot: $('narcLot').value || '',
+    exp: $('narcExp').value || '',
+    qty: Number($('narcQty').value || 0),
+    location: $('narcLocation').value || ''
+  };
+  jsonpCall('saveNarc', payload, function(res){
+    if(!res || res.success === false){
+      alert((res && res.message) ? res.message : 'Save failed');
+      return;
+    }
+    clearNarcForm();
+    alert(res.message || 'Saved');
+    refreshAll();
+  });
 }
 function toggleNarcMode(){
-  const modeEl = $('narcMode');
-  const mode = modeEl ? modeEl.value : 'create';
-  const createPanel = $('createNarcPanel');
-  const kitPanel = $('narcKitPanel');
-  if(createPanel) createPanel.style.display = mode === 'create' ? 'block' : 'none';
-  if(kitPanel) kitPanel.style.display = mode === 'kit' ? 'block' : 'none';
-  if (mode === 'kit') refreshNarcKitRowOptions();
+  const mode = $('narcMode').value;
+  $('createNarcPanel').style.display = mode === 'create' ? 'block' : 'none';
+  $('narcKitPanel').style.display = mode === 'kit' ? 'block' : 'none';
 }
 
 function initRestockRows(){
@@ -812,7 +768,7 @@ function addRestockRow(){
     '<td data-label="Status"><div id="statuswrap-'+idx+'"></div></td>';
   tbody.appendChild(tr);
   $('search-'+idx).addEventListener('click', ()=> rowLookup(idx));
-  $('scan-'+idx).addEventListener('keydown', ev=> { if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); }});
+  $('scan-'+idx).addEventListener('keydown', ev=> { if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); } });
   $('cam-'+idx).addEventListener('click', ()=> { openRowScanner(idx); });
 }
 function openRowScanner(idx){
@@ -948,7 +904,15 @@ function updateInlineStatus(idx){
 }
 function showInlineAdd(idx, scannedValue, isBarcodeScan){
   const input = $('scan-'+idx); if(input) input.value = scannedValue;
-  const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), invQty = $('invqty-'+idx), stockInfo = $('stockinfo-'+idx), bagQty = $('bagqty-'+idx);
+
+  const nameInput = $('nameinp-'+idx);
+  const lotInput = $('lotinp-'+idx);
+  const expInput = $('expinp-'+idx);
+  const catInput = $('catinp-'+idx);
+  const invQty = $('invqty-'+idx);
+  const stockInfo = $('stockinfo-'+idx);
+  const bagQty = $('bagqty-'+idx);
+
   if(nameInput) nameInput.disabled = false;
   if(lotInput) lotInput.disabled = false;
   if(expInput) expInput.disabled = false;
@@ -1007,19 +971,23 @@ function showInlineAdd(idx, scannedValue, isBarcodeScan){
       addUseBtn.disabled = true;
       const originalText = addUseBtn.textContent;
       addUseBtn.textContent = '...';
+
       const newName = (nameInput && nameInput.value || '').trim();
       const newLot = (lotInput && lotInput.value || '').trim();
       const newExp = (expInput && expInput.value || '').trim();
       const replaceTarget = (replaceSel && replaceSel.value || '').trim();
       const categoryChosen = (catInput && catInput.value || '').trim();
       const invQtyVal = Number(invQty && invQty.value || 1);
+
       if(!newName){ alert('Item name required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
       if(!newLot){ alert('Lot number required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
       if(!newExp){ alert('Expiration date required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
       if(!invQtyVal || invQtyVal <= 0){ alert('Inv Qty must be greater than 0'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
       if(!replaceTarget){ alert('Choose required item replaced'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+
       const barcodeToSend = (input && input.dataset.scannedBarcode) || '';
       const payload = { name: newName, barcode: barcodeToSend, lot: newLot, exp: newExp, qty: invQtyVal, category: categoryChosen || '' };
+
       jsonpCall('createItem', payload, function(res){
         if(!res || res.success===false){
           alert((res && res.message) ? res.message : 'Create failed');
@@ -1027,6 +995,7 @@ function showInlineAdd(idx, scannedValue, isBarcodeScan){
           addUseBtn.textContent = originalText;
           return;
         }
+
         const finalStatus = computeStatusFromExp(newExp);
         if(input){
           input.dataset.row = res.stockRow || '';
@@ -1036,17 +1005,23 @@ function showInlineAdd(idx, scannedValue, isBarcodeScan){
           input.dataset.replaceTarget = replaceTarget;
           if(payload.barcode) input.dataset.barcode = payload.barcode;
         }
+
         if(nameInput) nameInput.disabled = true;
         if(lotInput) lotInput.disabled = true;
         if(expInput) expInput.disabled = true;
         if(catInput) catInput.disabled = true;
         if(invQty){ invQty.disabled = true; invQty.value=''; invQty.classList.add('gray'); }
+
         const statusWrap = $('statuswrap-'+idx);
         if(statusWrap) statusWrap.innerHTML = '<input id="statusinp-'+idx+'" value="'+esc(finalStatus)+'" disabled style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" />';
+        const statusInp = $('statusinp-'+idx);
+        if(statusInp) statusInp.value = finalStatus;
+
         if(input){
           input.dataset.finalStatus = finalStatus;
           input.dataset.category = categoryChosen || input.dataset.category || '';
         }
+
         if(stockInfo) stockInfo.textContent = 'Added to inventory';
         const m = $('matches-'+idx); if(m) m.innerHTML = '';
         maybeAddRow();
@@ -1108,6 +1083,17 @@ function initNarcKitRows(){
   addNarcKitRow();
   addNarcKitRow();
 }
+function populateNarcKitNameSelect(sel, preselect){
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- select --</option>';
+  (narcLookups.narcNames || []).forEach(n => {
+    const o = document.createElement('option');
+    o.value = n;
+    o.textContent = n;
+    sel.appendChild(o);
+  });
+  if(preselect && (narcLookups.narcNames || []).includes(preselect)) sel.value = preselect;
+}
 function addNarcKitRow(){
   const tbody = $('narcKitBody');
   const idx = tbody.querySelectorAll('tr.narcKitRow').length + 1;
@@ -1124,13 +1110,14 @@ function addNarcKitRow(){
     '<td data-label="Status"><input id="nstat-'+idx+'" disabled /></td>';
   tbody.appendChild(tr);
   populateNarcKitNameSelect($('nname-'+idx));
-  $('nname-'+idx).addEventListener('change', function(){
-    const val = (this.value || '').trim();
-    if(val) narcKitLookupByName(idx, val);
-  });
   $('nsearch-'+idx).addEventListener('click', () => narcKitLookup(idx));
   $('nscan-'+idx).addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); narcKitLookup(idx); } });
   $('ncam-'+idx).addEventListener('click', ()=> openNarcKitScanner(idx));
+  $('nname-'+idx).addEventListener('change', function(){
+    const v = this.value || '';
+    const scan = $('nscan-'+idx);
+    if(scan) scan.dataset.name = v;
+  });
 }
 function openNarcKitScanner(idx){
   const row = $('narcKitRow-'+idx);
@@ -1149,6 +1136,7 @@ function narcKitLookup(idx){
   const input = $('nscan-'+idx);
   const q = (input.value || '').trim();
   if(!q){ alert('Type or scan something first'); return; }
+
   const loc = $('narcLocation').value || 'Bronxcare';
   jsonpCall('searchNarcStock', { q, location: loc }, function(res){
     const holder = $('nmatch-'+idx);
@@ -1162,24 +1150,6 @@ function narcKitLookup(idx){
     if(exact.length === 1){ applyNarcKitMatch(idx, exact[0]); return; }
     if(exact.length > 1){ showNarcKitMatches(idx, exact); return; }
     if(res.matches.length === 1){ applyNarcKitMatch(idx, res.matches[0]); return; }
-    showNarcKitMatches(idx, res.matches);
-  });
-}
-function narcKitLookupByName(idx, name){
-  const q = String(name || '').trim();
-  if(!q) return;
-  const loc = $('narcLocation').value || 'Bronxcare';
-  jsonpCall('searchNarcStock', { q, location: loc }, function(res){
-    if(!res || !res.found || !res.matches || res.matches.length === 0){
-      showNarcKitInline(idx, q);
-      const nameSel = $('nname-' + idx);
-      if(nameSel) nameSel.value = q;
-      return;
-    }
-    const nameMatches = res.matches.filter(m => String(m.name || '').trim().toLowerCase() === q.toLowerCase());
-    if(nameMatches.length === 1) { applyNarcKitMatch(idx, nameMatches[0]); return; }
-    if(nameMatches.length > 1) { showNarcKitMatches(idx, nameMatches); return; }
-    if(res.matches.length === 1) { applyNarcKitMatch(idx, res.matches[0]); return; }
     showNarcKitMatches(idx, res.matches);
   });
 }
@@ -1214,7 +1184,7 @@ function applyNarcKitMatch(idx, match){
   if(name){ name.value = match.name || ''; name.disabled = true; }
   if(lot){ lot.value = match.lot || ''; lot.disabled = true; }
   if(exp){ exp.value = match.exp || ''; exp.disabled = true; }
-  if(inv){ inv.value = String(match.qty ?? ''); inv.disabled = true; inv.classList.add('gray'); }
+  if(inv){ inv.value = ''; inv.disabled = true; inv.classList.add('gray'); }
   if(stat){ stat.value = enhanceStatus(match.status, match.exp) || 'OK'; }
 
   if(scan){
@@ -1222,7 +1192,7 @@ function applyNarcKitMatch(idx, match){
     scan.dataset.name = match.name || '';
     scan.dataset.lot = match.lot || '';
     scan.dataset.exp = match.exp || '';
-    scan.dataset.qty = String(match.qty ?? '');
+    scan.dataset.qty = match.qty || '';
   }
   if($('nmatch-' + idx)) $('nmatch-' + idx).innerHTML = '';
   maybeAddNarcKitRow();
@@ -1236,10 +1206,17 @@ function showNarcKitInline(idx, scannedValue){
   const scan = $('nscan-' + idx);
 
   populateNarcKitNameSelect(name);
-  if(name){ name.disabled = false; name.value = ''; }
-  if(lot){ lot.disabled = false; lot.value = ''; }
+  if(name){
+    name.disabled = false;
+    if(scannedValue && (narcLookups.narcNames || []).includes(scannedValue)) {
+      name.value = scannedValue;
+    } else {
+      name.value = '';
+    }
+  }
+  if(lot){ lot.disabled = false; }
   if(exp){ exp.disabled = false; }
-  if(inv){ inv.disabled = true; inv.classList.add('gray'); inv.value = ''; }
+  if(inv){ inv.disabled = false; inv.classList.remove('gray'); inv.value = ''; }
   if(stat){ stat.value = computeStatusFromExp(exp ? exp.value : ''); }
 
   if(scan){
@@ -1247,17 +1224,10 @@ function showNarcKitInline(idx, scannedValue){
     delete scan.dataset.name;
     delete scan.dataset.lot;
     delete scan.dataset.exp;
-    delete scan.dataset.qty;
   }
 
   if(exp){
     exp.oninput = function(){ if(stat) stat.value = computeStatusFromExp(exp.value || ''); };
-  }
-  if(name){
-    name.onchange = function(){
-      const v = (this.value || '').trim();
-      if(v) narcKitLookupByName(idx, v);
-    };
   }
 }
 function maybeAddNarcKitRow(){
@@ -1271,9 +1241,9 @@ function collectNarcKitEntries(){
   const kitId = $('narcKitSelect').value || '';
   if(!kitId){ alert('Select a Narc Kit ID first'); return null; }
 
-  const location = $('narcLocation').value || 'Bronxcare';
   const rows = Array.from(document.querySelectorAll('tr.narcKitRow'));
   const entries = [];
+  const loc = $('narcLocation').value || 'Bronxcare';
 
   rows.forEach((r, i) => {
     const idx = i + 1;
@@ -1288,7 +1258,7 @@ function collectNarcKitEntries(){
     const status = $('nstat-' + idx) ? $('nstat-' + idx).value.trim() : '';
 
     if ((name || barcode || lot) && qty > 0) {
-      entries.push({ kitId, location, name, barcode, lot, exp, qty, status });
+      entries.push({ kitId, location: loc, name, barcode, lot, exp, qty, status });
     }
   });
 
@@ -1339,25 +1309,32 @@ window.onload = function(){
   $('equipmentCurrentStatus').addEventListener('change', updateEquipmentStatusUI);
 
   $('narcMode').addEventListener('change', toggleNarcMode);
-  $('narcLocation').addEventListener('change', function(){ loadNarcLookups(); refreshNarcKitRowOptions(); });
+  $('narcLocation').addEventListener('change', loadNarcLookups);
   $('saveNarcBtn').addEventListener('click', saveNarcClient);
   $('clearNarcBtn').addEventListener('click', clearNarcForm);
   $('narcKitResetRows').addEventListener('click', initNarcKitRows);
   $('narcKitSubmitAll').addEventListener('click', submitNarcKitClient);
 
-  $('createCameraBtn').addEventListener('click', ()=> { const wrap = $('createScanner'); if(wrap.classList.contains('active')) return stopScanner(); startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam'); });
-  $('equipmentCameraBtn').addEventListener('click', ()=> { const wrap = $('equipmentScanner'); if(wrap.classList.contains('active')) return stopScanner(); startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam'); });
-  $('narcCameraBtn').addEventListener('click', ()=> { if($('narcBarcode')) $('narcBarcode').focus(); startScannerHtml5('createScannerBox', 'narcBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam'); });
-
+  $('createCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('createScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
+  });
+  $('equipmentCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('equipmentScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam');
+  });
+  $('narcCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('createScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('createScannerBox', 'narcBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
+  });
   $('btnRefresh').addEventListener('click', function(){
     disableButton(this, () => new Promise((resolve) => {
       jsonpCall('syncInventoryStock', null, function(){ setTimeout(()=>{ location.reload(); resolve(); }, 400); });
     }));
   });
-
-  if ($('narcMode') && !$('narcMode').value) $('narcMode').value = 'create';
-  toggleNarcMode();
-  loadNarcLookups();
 
   function initGoogle() {
     if (window.google && google.accounts && google.accounts.id) {
