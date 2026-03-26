@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALS Inventory — Web App v1.98</title>
+  <title>ALS Inventory — Web App v1.99</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
@@ -53,7 +53,7 @@
     <div class="brand">
       <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
       <div>
-        <div style="font-weight:800">ALS Inventory — Web App v1.98</div>
+        <div style="font-weight:800">ALS Inventory — Web App v1.99</div>
         <div class="small signedInWrap">
           Signed in as: <span id="currentUser">...</span>
           <div id="btnSignIn"></div>
@@ -296,7 +296,7 @@
   </div>
 
 <script>
-const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbzbrWWsA7nONsnu62UxKevi9JHu63RO3uoKDiOO9y0VrvNws06Z-Xri36FQ_SO1CdmIyw/exec";
+const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbyM30W8HyynzZcQmPNgKGC2k99DYQ2nP5QlFT3rzJLz508pYfJDKOSZOroQSh-bIjcI/exec";
 const $ = id => document.getElementById(id);
 const esc = s => s==null ? "" : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
@@ -835,9 +835,11 @@ function loadNarcVerifyRows(){
   jsonpCall('getNarcKitContents', { kitId: kitId }, function(results){
     tbody.innerHTML = '';
     const rows = [];
+    let seq = 0;
     (results || []).forEach(group => {
       (group.items || []).forEach(it => {
         rows.push({
+          seq: seq++,
           kitId: kitId,
           name: it.name || group.name || '',
           barcode: it.barcode || '',
@@ -855,8 +857,9 @@ function loadNarcVerifyRows(){
     rows.forEach(r => {
       const tr = document.createElement('tr');
       tr.className = 'narcVerifyRow';
+      tr.dataset.seq = String(r.seq);
       tr.innerHTML =
-        '<td><input type="checkbox" class="narcVerifyActive" data-kit="'+esc(r.kitId)+'" data-name="'+esc(r.name)+'" data-barcode="'+esc(r.barcode)+'" data-lot="'+esc(r.lot)+'" data-exp="'+esc(r.exp)+'" data-qty="'+esc(r.qty)+'" data-status="'+esc(r.status)+'" checked></td>' +
+        '<td><input type="checkbox" class="narcVerifyActive" data-kit="'+esc(r.kitId)+'" data-seq="'+esc(r.seq)+'" data-name="'+esc(r.name)+'" data-barcode="'+esc(r.barcode)+'" data-lot="'+esc(r.lot)+'" data-exp="'+esc(r.exp)+'" data-qty="'+esc(r.qty)+'" data-status="'+esc(r.status)+'" checked></td>' +
         '<td>'+esc(r.name)+'</td>' +
         '<td>'+esc(r.lot)+'</td>' +
         '<td>'+esc(formatDateMMDDYYYY(r.exp))+'</td>' +
@@ -870,17 +873,21 @@ function loadNarcVerifyRows(){
 function collectNarcVerifyEntries(){
   const kitId = $('narcVerifySelect') ? $('narcVerifySelect').value : '';
   if(!kitId){ alert('Select a Narc Kit ID first'); return null; }
-  const checks = Array.from(document.querySelectorAll('.narcVerifyActive')).filter(cb => cb.checked);
-  const entries = checks.map(cb => ({
-    kitId,
-    name: cb.dataset.name || '',
-    barcode: cb.dataset.barcode || '',
-    lot: cb.dataset.lot || '',
-    exp: cb.dataset.exp || '',
-    qty: Number(cb.dataset.qty || 0),
-    status: cb.dataset.status || '',
-    active: true
-  })).filter(e => e.name || e.barcode || e.lot);
+  const rows = Array.from(document.querySelectorAll('.narcVerifyRow'));
+  const entries = rows.map((tr, idx) => {
+    const cb = tr.querySelector('.narcVerifyActive');
+    return {
+      kitId,
+      seq: Number(tr.dataset.seq || idx),
+      name: cb ? (cb.dataset.name || '') : '',
+      barcode: cb ? (cb.dataset.barcode || '') : '',
+      lot: cb ? (cb.dataset.lot || '') : '',
+      exp: cb ? (cb.dataset.exp || '') : '',
+      qty: cb ? Number(cb.dataset.qty || 0) : 0,
+      status: cb ? (cb.dataset.status || '') : '',
+      active: !!(cb && cb.checked)
+    };
+  }).filter(e => e.name || e.barcode || e.lot);
   return entries;
 }
 
