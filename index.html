@@ -680,27 +680,25 @@ function renderDashboardKits(){
   const selectedKit = $('dashboardNarcKitSelect').value;
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
-  head.innerHTML = '<th>Row #</th><th>Narc Name</th><th>Lot Number</th><th>Expiration Date</th><th>Quantity</th><th>Status</th>';
-  body.innerHTML = '<tr><td colspan="6" class="small">Select a kit</td></tr>';
+  head.innerHTML = '<th>Narc Name</th><th>Lot Number</th><th>Expiration Date</th><th>Quantity</th><th>Status</th>';
+  body.innerHTML = '<tr><td colspan="5" class="small">Select a kit</td></tr>';
   if(!selectedKit) return;
   jsonpCall('getNarcKitContents', { kitId: selectedKit }, function(results){
     body.innerHTML = '';
     if(!results || !results.length){
-      body.innerHTML = '<tr><td colspan="6" class="small">No kit data</td></tr>';
+      body.innerHTML = '<tr><td colspan="5" class="small">No kit data</td></tr>';
       return;
     }
-    let rowNo = 1;
     results.forEach(r=>{
       if(!r.items || !r.items.length){
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td>'+esc(rowNo++)+'</td><td>'+esc(r.name||'')+'</td><td></td><td></td><td></td><td></td>';
+        tr.innerHTML = '<td>'+esc(r.name||'')+'</td><td></td><td></td><td></td><td></td>';
         body.appendChild(tr);
         return;
       }
       r.items.forEach(it=>{
         const tr = document.createElement('tr');
         tr.innerHTML =
-          '<td>'+esc(rowNo++)+'</td>' +
           '<td>'+esc(it.name || '')+'</td>' +
           '<td>'+esc(it.lot || '')+'</td>' +
           '<td>'+esc(formatDateMMDDYYYY(it.exp))+'</td>' +
@@ -1516,21 +1514,7 @@ function collectNarcKitEntries(){
     const status = $('nstat-' + idx) ? $('nstat-' + idx).value.trim() : '';
 
     if ((name || barcode || lot) && qty > 0) {
-      for(let unit = 1; unit <= qty; unit += 1){
-        entries.push({
-          kitId,
-          location: loc,
-          name,
-          barcode,
-          lot,
-          exp,
-          qty: 1,
-          status,
-          sourceRow: idx,
-          sourceQty: qty,
-          sourceUnit: unit
-        });
-      }
+      entries.push({ kitId, location: loc, name, barcode, lot, exp, qty, status });
     }
   });
 
@@ -1556,89 +1540,100 @@ function submitNarcKitClient(){
   }));
 }
 
-document.addEventListener('DOMContentLoaded', function(){
-  const bind = (id, event, fn) => { const el = $(id); if(el) el.addEventListener(event, fn); };
+window.onload = function(){
+  $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
+  $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
+  $('btnEquipment').addEventListener('click', ()=> showCard('equipmentCard'));
+  $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
+  $('btnNarcotics').addEventListener('click', ()=> showCard('narcoticsCard'));
+  $('btnSignOut').addEventListener('click', signOutUser);
+  $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
+  $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
+  $('dashboardNarcKitSelect').addEventListener('change', ()=> renderDashboardKits());
+  if($('narcVerifySelect')) $('narcVerifySelect').addEventListener('change', ()=> loadNarcVerifyRows());
+  $('hideExpired').addEventListener('change', renderDashboard);
+  $('hideOutOfStock').addEventListener('change', renderDashboard);
+  $('createCloseCam').addEventListener('click', stopScanner);
+  $('equipmentCloseCam').addEventListener('click', stopScanner);
+  $('createSave').addEventListener('click', createItemClient);
+  $('createClear').addEventListener('click', clearCreateForm);
+  $('createCategory').addEventListener('change', ()=> populateReqDatalist($('createCategory').value || ''));
+  $('resetRows').addEventListener('click', initRestockRows);
+  $('submitAll').addEventListener('click', submitAll);
+  $('equipmentSearchBtn').classList.add('searchActionBtn');
+  $('equipmentSearchBtn').addEventListener('click', searchEquipmentClient);
+  $('equipmentSave').addEventListener('click', saveEquipmentClient);
+  $('equipmentClear').addEventListener('click', clearEquipmentForm);
+  $('equipmentCurrentStatus').addEventListener('change', updateEquipmentStatusUI);
 
-  bind('btnDashboard', 'click', () => showCard('dashboardCard'));
-  bind('btnCreate', 'click', () => showCard('createCard'));
-  bind('btnRestock', 'click', () => showCard('bagCard'));
-  bind('btnEquipment', 'click', () => showCard('equipmentCard'));
-  bind('btnNarcotics', 'click', () => showCard('narcoticsCard'));
-  bind('btnRefresh', 'click', () => refreshAll());
-  bind('btnSignOut', 'click', () => { signOutUser(); location.reload(); });
+  $('narcMode').addEventListener('change', function(){ toggleNarcMode(); if(this.value === 'verify') loadNarcVerifyRows(); });
+  $('narcLocation').addEventListener('change', loadNarcLookups);
+  $('saveNarcBtn').addEventListener('click', saveNarcClient);
+  $('clearNarcBtn').addEventListener('click', clearNarcForm);
+  $('narcKitResetRows').addEventListener('click', initNarcKitRows);
+  $('narcKitSubmitAll').addEventListener('click', submitNarcKitClient);
+  if($('narcVerifyResetRows')) $('narcVerifyResetRows').addEventListener('click', loadNarcVerifyRows);
+  if($('narcVerifySubmitAll')) $('narcVerifySubmitAll').addEventListener('click', submitNarcVerifyClient);
 
-  bind('dashboardViewSelect', 'change', onDashboardViewToggle);
-  bind('dashboardBagSelect', 'change', renderDashboard);
-  bind('dashboardNarcKitSelect', 'change', renderDashboard);
-  bind('hideExpired', 'change', renderDashboard);
-  bind('hideOutOfStock', 'change', renderDashboard);
+  $('createCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('createScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
+  });
+  $('equipmentCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('equipmentScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam');
+  });
+  $('narcCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('createScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('createScannerBox', 'narcBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
+  });
+  $('btnRefresh').addEventListener('click', function(){
+    disableButton(this, () => new Promise((resolve) => {
+      jsonpCall('syncInventoryStock', null, function(){ setTimeout(()=>{ location.reload(); resolve(); }, 400); });
+    }));
+  });
 
-  bind('createSave', 'click', createItemClient);
-  bind('createClear', 'click', clearCreateForm);
-  bind('createCameraBtn', 'click', () => { const c = $('createScanner'); if(c){ c.classList.add('active'); c.style.display = 'block'; } startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam'); });
-  bind('createCloseCam', 'click', stopScanner);
+  if ($('narcMode') && !$('narcMode').value) $('narcMode').value = 'create';
+  toggleNarcMode();
+  loadNarcLookups();
 
-  bind('equipmentSearchBtn', 'click', searchEquipmentClient);
-  bind('equipmentSave', 'click', saveEquipmentClient);
-  bind('equipmentClear', 'click', clearEquipmentForm);
-  bind('equipmentCameraBtn', 'click', () => { const c = $('equipmentScanner'); if(c){ c.classList.add('active'); c.style.display = 'block'; } startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam'); });
-  bind('equipmentCloseCam', 'click', stopScanner);
+  function initGoogle() {
+    if (window.google && google.accounts && google.accounts.id) {
+      try {
+        google.accounts.id.initialize({
+          client_id: '225540626175-ijteecu232e4sudp76tkdf2tnd7n7gmt.apps.googleusercontent.com',
+          callback: handleSignIn,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+        google.accounts.id.renderButton(document.getElementById('btnSignIn'), { theme: 'outline', size: 'medium', text: 'signin_with' });
+      } catch (e) { console.error('Google init error:', e); }
+    } else {
+      setTimeout(initGoogle, 200);
+    }
+  }
+  initGoogle();
 
-  bind('submitAll', 'click', submitAll);
-  bind('resetRows', 'click', initRestockRows);
-
-  bind('saveNarcBtn', 'click', saveNarcClient);
-  bind('narcMode', 'change', function(){ toggleNarcMode(); loadNarcLookups(); if(this.value === 'verify') loadNarcVerifyRows(); });
-  bind('narcLocation', 'change', function(){ loadNarcLookups(); });
-  bind('narcKitSubmitAll', 'click', submitNarcKitClient);
-  bind('narcKitResetRows', 'click', initNarcKitRows);
-  bind('narcKitSelect', 'change', renderDashboard);
-  bind('narcVerifySubmitAll', 'click', submitNarcVerifyClient);
-  bind('narcVerifyResetRows', 'click', loadNarcVerifyRows);
-  bind('narcVerifySelect', 'change', loadNarcVerifyRows);
-
-  updateUserUI(null);
-
-  const googleButtonHost = $('btnSignIn');
-  const clientId = (window.GOOGLE_CLIENT_ID || (googleButtonHost && googleButtonHost.dataset && googleButtonHost.dataset.clientId) || '').trim();
-
-  if (googleToken) {
+  if(googleToken){
     jsonpCall('verifyToken', { token: googleToken }, function(resp){
       if(resp && resp.email && resp.email !== 'unknown'){
         currentUser = resp.email;
         updateUserUI(resp.email);
-        if(window.google && google.accounts && google.accounts.id && clientId){
-          try{
-            google.accounts.id.initialize({ client_id: clientId, callback: handleSignIn });
-            google.accounts.id.renderButton(googleButtonHost, { theme: 'outline', size: 'small' });
-          }catch(e){}
-        }
+        showCard('dashboardCard');
         refreshAll();
       }else{
-        signOutUser();
+        googleToken = null;
+        localStorage.removeItem('als_google_token');
+        updateUserUI(null);
       }
     });
-  } else {
-    if(window.google && google.accounts && google.accounts.id && clientId && googleButtonHost){
-      try{
-        google.accounts.id.initialize({ client_id: clientId, callback: handleSignIn });
-        google.accounts.id.renderButton(googleButtonHost, { theme: 'outline', size: 'small' });
-      }catch(e){
-        googleButtonHost.innerHTML = '<span class="small">Sign-in unavailable</span>';
-      }
-    } else if (googleButtonHost) {
-      googleButtonHost.innerHTML = '<span class="small">Sign-in unavailable</span>';
-    }
+  }else{
+    updateUserUI(null);
   }
-
-  if(!selectedBag && $('bagSelect') && $('bagSelect').value){
-    selectedBag = $('bagSelect').value;
-  }
-
-  refreshAll();
-  showCard('dashboardCard');
-});
-
+};
 </script>
 </body>
 </html>
