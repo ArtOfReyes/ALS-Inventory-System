@@ -1555,7 +1555,90 @@ function submitNarcKitClient(){
     });
   }));
 }
-;
+
+document.addEventListener('DOMContentLoaded', function(){
+  const bind = (id, event, fn) => { const el = $(id); if(el) el.addEventListener(event, fn); };
+
+  bind('btnDashboard', 'click', () => showCard('dashboardCard'));
+  bind('btnCreate', 'click', () => showCard('createCard'));
+  bind('btnRestock', 'click', () => showCard('bagCard'));
+  bind('btnEquipment', 'click', () => showCard('equipmentCard'));
+  bind('btnNarcotics', 'click', () => showCard('narcoticsCard'));
+  bind('btnRefresh', 'click', () => refreshAll());
+  bind('btnSignOut', 'click', () => { signOutUser(); location.reload(); });
+
+  bind('dashboardViewSelect', 'change', onDashboardViewToggle);
+  bind('dashboardBagSelect', 'change', renderDashboard);
+  bind('dashboardNarcKitSelect', 'change', renderDashboard);
+  bind('hideExpired', 'change', renderDashboard);
+  bind('hideOutOfStock', 'change', renderDashboard);
+
+  bind('createSave', 'click', createItemClient);
+  bind('createClear', 'click', clearCreateForm);
+  bind('createCameraBtn', 'click', () => { const c = $('createScanner'); if(c){ c.classList.add('active'); c.style.display = 'block'; } startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam'); });
+  bind('createCloseCam', 'click', stopScanner);
+
+  bind('equipmentSearchBtn', 'click', searchEquipmentClient);
+  bind('equipmentSave', 'click', saveEquipmentClient);
+  bind('equipmentClear', 'click', clearEquipmentForm);
+  bind('equipmentCameraBtn', 'click', () => { const c = $('equipmentScanner'); if(c){ c.classList.add('active'); c.style.display = 'block'; } startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam'); });
+  bind('equipmentCloseCam', 'click', stopScanner);
+
+  bind('submitAll', 'click', submitAll);
+  bind('resetRows', 'click', initRestockRows);
+
+  bind('saveNarcBtn', 'click', saveNarcClient);
+  bind('narcMode', 'change', function(){ toggleNarcMode(); loadNarcLookups(); if(this.value === 'verify') loadNarcVerifyRows(); });
+  bind('narcLocation', 'change', function(){ loadNarcLookups(); });
+  bind('narcKitSubmitAll', 'click', submitNarcKitClient);
+  bind('narcKitResetRows', 'click', initNarcKitRows);
+  bind('narcKitSelect', 'change', renderDashboard);
+  bind('narcVerifySubmitAll', 'click', submitNarcVerifyClient);
+  bind('narcVerifyResetRows', 'click', loadNarcVerifyRows);
+  bind('narcVerifySelect', 'change', loadNarcVerifyRows);
+
+  updateUserUI(null);
+
+  const googleButtonHost = $('btnSignIn');
+  const clientId = (window.GOOGLE_CLIENT_ID || (googleButtonHost && googleButtonHost.dataset && googleButtonHost.dataset.clientId) || '').trim();
+
+  if (googleToken) {
+    jsonpCall('verifyToken', { token: googleToken }, function(resp){
+      if(resp && resp.email && resp.email !== 'unknown'){
+        currentUser = resp.email;
+        updateUserUI(resp.email);
+        if(window.google && google.accounts && google.accounts.id && clientId){
+          try{
+            google.accounts.id.initialize({ client_id: clientId, callback: handleSignIn });
+            google.accounts.id.renderButton(googleButtonHost, { theme: 'outline', size: 'small' });
+          }catch(e){}
+        }
+        refreshAll();
+      }else{
+        signOutUser();
+      }
+    });
+  } else {
+    if(window.google && google.accounts && google.accounts.id && clientId && googleButtonHost){
+      try{
+        google.accounts.id.initialize({ client_id: clientId, callback: handleSignIn });
+        google.accounts.id.renderButton(googleButtonHost, { theme: 'outline', size: 'small' });
+      }catch(e){
+        googleButtonHost.innerHTML = '<span class="small">Sign-in unavailable</span>';
+      }
+    } else if (googleButtonHost) {
+      googleButtonHost.innerHTML = '<span class="small">Sign-in unavailable</span>';
+    }
+  }
+
+  if(!selectedBag && $('bagSelect') && $('bagSelect').value){
+    selectedBag = $('bagSelect').value;
+  }
+
+  refreshAll();
+  showCard('dashboardCard');
+});
+
 </script>
 </body>
 </html>
